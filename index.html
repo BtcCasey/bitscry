@@ -2,32 +2,31 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>THE LEYLINE RITUAL</title>
+    <title>THE RITUAL OF PROOF</title>
     <link href="https://fonts.googleapis.com/css2?family=Grenze+Gotisch:wght@400;700&family=IM+Fell+DW+Pica&display=swap" rel="stylesheet">
     <style>
         :root {
-            --bg: #0a0908;
-            --mana: #00d4ff;
+            --blood: #8b0000;
+            --ritual-red: #ff3333;
             --gold: #d4af37;
-            --ink: #e3d3a3;
+            --paper: #e3d3a3;
         }
-        body { margin: 0; overflow: hidden; background: var(--bg); font-family: 'IM Fell DW Pica', serif; color: var(--ink); }
+        body { margin: 0; overflow: hidden; background: #0a0806; font-family: 'IM Fell DW Pica', serif; color: var(--paper); }
         
-        /* Floating HUD */
         #altar-ui {
-            position: absolute; top: 40px; left: 40px; pointer-events: none;
+            position: absolute; top: 50px; left: 50px; pointer-events: none; z-index: 100;
         }
-        #price { font-family: 'Grenze Gotisch', serif; font-size: 72px; color: var(--gold); line-height: 1; }
-        #hash { font-size: 18px; color: var(--mana); opacity: 0.8; margin-top: 10px; }
+        #price { font-family: 'Grenze Gotisch', serif; font-size: 84px; color: var(--ritual-red); line-height: 0.8; text-shadow: 0 0 20px rgba(139, 0, 0, 0.8); }
+        #hash { font-size: 16px; color: var(--paper); opacity: 0.6; margin-top: 15px; letter-spacing: 2px; }
 
-        /* The Ritual Log */
         #log {
-            position: absolute; bottom: 40px; left: 40px; width: 300px;
-            max-height: 200px; overflow: hidden;
+            position: absolute; bottom: 50px; left: 50px; width: 320px;
+            max-height: 250px; overflow: hidden;
             display: flex; flex-direction: column-reverse;
-            mask-image: linear-gradient(to top, black 80%, transparent 100%);
+            mask-image: linear-gradient(to top, black 70%, transparent 100%);
+            font-size: 14px; color: var(--ritual-red);
         }
-        .rune-entry { font-size: 13px; padding: 4px 0; border-bottom: 1px solid rgba(227, 211, 163, 0.1); }
+        .entry { padding: 4px 0; border-bottom: 1px solid rgba(139, 0, 0, 0.2); font-weight: bold; }
         
         canvas { display: block; }
     </style>
@@ -36,7 +35,7 @@
 
 <div id="altar-ui">
     <div id="price">℥ ...</div>
-    <div id="hash">LEYLINE: CALCULATING EH/S</div>
+    <div id="hash">LEYLINE STRENGTH: DIVINING...</div>
 </div>
 
 <div id="log"></div>
@@ -45,19 +44,24 @@
 <script>
     const canvas = document.getElementById('screen');
     const ctx = canvas.getContext('2d');
-    let state = { price: 0, hash: 730_000_000_000_000_000_000n, history: [] };
-    let runes = [];
+    
+    let state = {
+        price: 0,
+        history: [], // Historical price points
+        hash: 742_000_000_000_000_000_000n,
+        runes: [],
+        stoneSeed: Math.random()
+    };
 
     function resize() {
-        canvas.width = window.innerWidth * window.devicePixelRatio;
-        canvas.height = window.innerHeight * window.devicePixelRatio;
-        ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
     }
     window.addEventListener('resize', resize);
     resize();
 
     async function init() {
-        // Fetch historical data for the "Leyline"
+        // Fetch 24h of data (300s intervals = 288 candles)
         const candles = await fetch('https://api.exchange.coinbase.com/products/BTC-USD/candles?granularity=300').then(r => r.json());
         state.history = candles.map(c => c[4]).reverse();
 
@@ -70,77 +74,121 @@
                 document.getElementById('price').innerText = `℥ ${state.price.toLocaleString()}`;
             }
             if (data.type === 'match') {
-                // Create a "Rune" particle
-                runes.push({
+                state.runes.push({
                     x: Math.random() * window.innerWidth,
                     y: Math.random() * window.innerHeight,
-                    size: parseFloat(data.size),
                     life: 1.0,
-                    color: data.side === 'buy' ? '#00d4ff' : '#ff4b2b'
+                    size: Math.sqrt(parseFloat(data.size)) * 15
                 });
                 const div = document.createElement('div');
-                div.className = 'rune-entry';
-                div.innerText = `ᚱ ${data.size} @ ${data.price}`;
+                div.className = 'entry';
+                div.innerText = `ᛟ ${data.size} BTC @ ${state.price.toLocaleString()}`;
                 document.getElementById('log').prepend(div);
+                if (document.getElementById('log').childNodes.length > 15) document.getElementById('log').lastChild.remove();
             }
         };
+        
+        setInterval(() => {
+            state.hash += BigInt(Math.floor((Math.random()-0.5)*2000000000000000));
+            document.getElementById('hash').innerText = `LEYLINE PROOF: ${(state.hash / 1_000_000_000_000_000_000n)} EH/s`;
+        }, 2000);
+    }
+
+    function drawStone() {
+        const w = window.innerWidth, h = window.innerHeight;
+        // Base Stone Color
+        ctx.fillStyle = '#1a1816';
+        ctx.fillRect(0, 0, w, h);
+        
+        // Procedural Grain/Cracks
+        ctx.strokeStyle = '#0f0e0d';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        for(let i=0; i<50; i++) {
+            ctx.moveTo(Math.random()*w, 0);
+            ctx.lineTo(Math.random()*w, h);
+        }
+        ctx.stroke();
+
+        // Blood Motif Borders
+        ctx.strokeStyle = 'rgba(139, 0, 0, 0.3)';
+        ctx.lineWidth = 10;
+        ctx.strokeRect(20, 20, w-40, h-40);
+        ctx.lineWidth = 2;
+        ctx.strokeRect(35, 35, w-70, h-70);
     }
 
     function render() {
         const w = window.innerWidth, h = window.innerHeight;
         const cx = w/2, cy = h/2;
-
-        // Dark Surface
-        ctx.fillStyle = '#0a0908';
-        ctx.fillRect(0, 0, w, h);
-
-        // 1. THE LEYLINE (The Data Stream)
-        ctx.strokeStyle = 'rgba(212, 175, 55, 0.15)';
-        ctx.lineWidth = 1;
-        ctx.beginPath();
-        const step = w / state.history.length;
-        state.history.forEach((p, i) => {
-            const x = i * step;
-            const y = h * 0.5 + (Math.sin(i * 0.1 + Date.now()*0.001) * 20); // Subtle magical weave
-            if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
-        });
-        ctx.stroke();
-
-        // 2. THE SCRYING ORB (Minimalist Pulse)
-        const orbRadius = 150;
-        const pulse = Math.sin(Date.now() * 0.002) * 10;
         
-        const g = ctx.createRadialGradient(cx, cy, 0, cx, cy, orbRadius + pulse);
-        g.addColorStop(0, 'rgba(0, 212, 255, 0.1)');
+        drawStone();
+
+        // 1. THE BLOOD LEYLINE (Price History)
+        if (state.history.length > 0) {
+            ctx.shadowBlur = 15;
+            ctx.shadowColor = '#ff0000';
+            ctx.strokeStyle = 'rgba(255, 0, 0, 0.4)';
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            
+            const min = Math.min(...state.history);
+            const max = Math.max(...state.history);
+            const range = max - min;
+            const step = w / state.history.length;
+
+            state.history.forEach((p, i) => {
+                const x = i * step;
+                const y = h - ((p - min) / range * (h * 0.6) + h * 0.2);
+                if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+            });
+            ctx.stroke();
+            ctx.shadowBlur = 0;
+        }
+
+        // 2. THE RITUAL CIRCLE (Scrying Orb)
+        const orbR = 160;
+        const pulse = Math.sin(Date.now() * 0.003) * 5;
+        
+        // Inner Glow
+        const g = ctx.createRadialGradient(cx, cy, 0, cx, cy, orbR + pulse);
+        g.addColorStop(0, 'rgba(139, 0, 0, 0.4)');
         g.addColorStop(1, 'transparent');
         ctx.fillStyle = g;
-        ctx.beginPath(); ctx.arc(cx, cy, orbRadius + pulse, 0, Math.PI*2); ctx.fill();
+        ctx.beginPath(); ctx.arc(cx, cy, orbR + pulse, 0, Math.PI*2); ctx.fill();
 
-        ctx.strokeStyle = 'rgba(0, 212, 255, 0.4)';
+        // Ritual Carvings
+        ctx.strokeStyle = '#ff3333';
         ctx.lineWidth = 2;
-        ctx.setLineDash([5, 15]);
-        ctx.beginPath(); ctx.arc(cx, cy, orbRadius, 0, Math.PI*2); ctx.stroke();
+        ctx.setLineDash([10, 20]);
+        ctx.beginPath(); ctx.arc(cx, cy, orbR, 0, Math.PI*2); ctx.stroke();
         ctx.setLineDash([]);
+        
+        // Rotating Core
+        ctx.save();
+        ctx.translate(cx, cy);
+        ctx.rotate(Date.now() * 0.0005);
+        ctx.strokeStyle = 'rgba(255, 51, 51, 0.6)';
+        ctx.strokeRect(-orbR/2, -orbR/2, orbR, orbR);
+        ctx.restore();
 
-        // 3. RUNES (Trade Particles)
-        runes = runes.filter(r => {
-            ctx.fillStyle = r.color;
+        // 3. RUNES (Trade Events)
+        state.runes = state.runes.filter(r => {
+            ctx.fillStyle = '#ff3333';
+            ctx.shadowBlur = 10; ctx.shadowColor = '#ff0000';
             ctx.globalAlpha = r.life;
-            // Draw a small diamond rune
             ctx.beginPath();
-            ctx.moveTo(r.x, r.y - 10);
-            ctx.lineTo(r.x + 10, r.y);
-            ctx.lineTo(r.x, r.y + 10);
-            ctx.lineTo(r.x - 10, r.y);
+            ctx.arc(r.x, r.y, r.size, 0, Math.PI*2);
             ctx.fill();
             
-            // Move toward center orb
-            r.x += (cx - r.x) * 0.02;
-            r.y += (cy - r.y) * 0.02;
-            r.life -= 0.01;
+            // Draw a diamond "crack" around it
+            ctx.strokeStyle = '#ff3333';
+            ctx.strokeRect(r.x - r.size, r.y - r.size, r.size*2, r.size*2);
+
+            r.life -= 0.015;
             return r.life > 0;
         });
-        ctx.globalAlpha = 1;
+        ctx.globalAlpha = 1; ctx.shadowBlur = 0;
 
         requestAnimationFrame(render);
     }
