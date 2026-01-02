@@ -6,38 +6,40 @@
     <link href="https://fonts.googleapis.com/css2?family=Grenze+Gotisch:wght@400;700&family=IM+Fell+DW+Pica:ital@0;1&display=swap" rel="stylesheet">
     <style>
         :root {
-            --paper: #c9b087;
-            --ink: #2b1a0f;
-            --mana: #4a90e2;
-            --blood: #8b0000;
+            --paper: #e3d3a3; /* Brighter parchment */
+            --gold: #ffcc33;
+            --mana: #4facfe;
+            --blood: #ff4b2b;
         }
         body { 
-            margin: 0; overflow: hidden; background: #050403; 
-            font-family: 'IM Fell DW Pica', serif; color: var(--paper); 
+            margin: 0; overflow: hidden; background: #1a1510; 
+            font-family: 'IM Fell DW Pica', serif; color: #2b1a0f; 
         }
 
-        /* The Spellbook Ledger */
+        /* The Magic Spellbook */
         #spellbook {
-            position: absolute; bottom: 50px; right: 80px; 
-            width: 340px; height: 420px; 
-            background: #2a2015; border: 12px solid #3d2b1f;
-            padding: 25px; box-shadow: 30px 30px 60px rgba(0,0,0,0.9);
-            transform: rotate(3deg); z-index: 10;
-            background-image: linear-gradient(90deg, #1a1510 0%, #2a2015 5%, #2a2015 95%, #1a1510 100%);
+            position: absolute; bottom: 40px; right: 60px; 
+            width: 360px; height: 480px; 
+            background: var(--paper); border: 15px solid #4a3728;
+            border-radius: 5px; padding: 30px; 
+            box-shadow: 0 0 50px rgba(0,0,0,0.7), inset 0 0 100px rgba(0,0,0,0.1);
+            transform: perspective(1000px) rotateY(-5deg) rotateX(5deg);
+            z-index: 10;
+            background-image: linear-gradient(to right, rgba(0,0,0,0.2) 0%, transparent 5%, transparent 95%, rgba(0,0,0,0.2) 100%);
         }
 
         #price-tag {
-            position: absolute; top: 60px; left: 80px;
-            font-family: 'Grenze Gotisch', serif; font-size: 58px;
-            color: var(--paper); text-shadow: 3px 3px 10px rgba(0,0,0,0.8);
+            position: absolute; top: 40px; left: 60px;
+            font-family: 'Grenze Gotisch', serif; font-size: 64px;
+            color: var(--gold); text-shadow: 2px 2px 15px rgba(0,0,0,0.5);
             z-index: 20;
         }
 
-        .entry { font-size: 14px; margin-bottom: 6px; border-bottom: 1px solid rgba(255,255,255,0.03); opacity: 0.8; }
-        .buy { color: var(--mana); }
-        .sell { color: var(--blood); }
+        .entry { font-size: 15px; margin-bottom: 8px; border-bottom: 1px solid rgba(0,0,0,0.1); font-weight: bold; }
+        .buy { color: #0066cc; }
+        .sell { color: #990000; }
 
-        canvas { display: block; filter: contrast(1.1) brightness(0.9); }
+        canvas { display: block; filter: saturate(1.2); }
     </style>
 </head>
 <body>
@@ -45,7 +47,7 @@
 <div id="price-tag">℥ ...</div>
 
 <div id="spellbook">
-    <div style="font-family: 'Grenze Gotisch'; font-size: 22px; text-align: center; margin-bottom: 15px; color: var(--gold);">The Ledger of Flux</div>
+    <div style="font-family: 'Grenze Gotisch'; font-size: 26px; text-align: center; margin-bottom: 20px; color: #4a3728; border-bottom: 2px solid #4a3728;">Incantations of the Tape</div>
     <div id="log-content"></div>
 </div>
 
@@ -57,8 +59,8 @@
     const priceDisplay = document.getElementById('price-tag');
     const logContent = document.getElementById('log-content');
 
-    let btcPrice = 0, startDayPrice = 0;
-    let smokeParticles = [], rainDrops = [];
+    let btcPrice = 0, startDayPrice = 0, priceTrend = 1; 
+    let smokeParticles = [], rainDrops = [], bubbles = [];
     let flashOpacity = 0;
 
     function resize() {
@@ -68,10 +70,8 @@
     window.addEventListener('resize', resize);
     resize();
 
-    // Setup Rain
-    for(let i=0; i<150; i++) {
-        rainDrops.push({ x: Math.random()*window.innerWidth, y: Math.random()*window.innerHeight, v: 15 + Math.random()*10 });
-    }
+    // Rain
+    for(let i=0; i<150; i++) rainDrops.push({ x: Math.random()*window.innerWidth, y: Math.random()*window.innerHeight, v: 12 + Math.random()*8 });
 
     async function init() {
         const stats = await fetch('https://api.exchange.coinbase.com/products/BTC-USD/stats').then(r => r.json());
@@ -83,120 +83,123 @@
             const data = JSON.parse(e.data);
             if (data.type === 'ticker') {
                 btcPrice = parseFloat(data.price);
+                priceTrend = btcPrice >= startDayPrice ? 1 : -1;
                 priceDisplay.innerText = `℥ ${btcPrice.toLocaleString()}`;
-                priceDisplay.style.color = btcPrice >= startDayPrice ? '#4a90e2' : '#8b0000';
+                priceDisplay.style.color = priceTrend === 1 ? '#4facfe' : '#ff4b2b';
             }
             if (data.type === 'match') {
                 const size = parseFloat(data.size);
-                // Create Smoke Puff from the "Pipe" area
-                for(let i=0; i<3; i++) {
-                    smokeParticles.push({
-                        x: window.innerWidth * 0.15, y: window.innerHeight * 0.85,
-                        vx: (Math.random() - 0.1) * 1.5, vy: -Math.random() * 2 - 1,
-                        size: 10, life: 1.0
-                    });
-                }
-                if (size > 0.5) flashOpacity = 0.6; // Lightning!
+                // Smoke puff
+                for(let i=0; i<4; i++) smokeParticles.push({ x: window.innerWidth * 0.1, y: window.innerHeight * 0.8, vx: Math.random(), vy: -2, size: 8, life: 1.0 });
+                // Vial bubbles
+                bubbles.push({ x: window.innerWidth * 0.4 + (Math.random()*20-10), y: window.innerHeight * 0.75, v: 1+Math.random()*2, life: 1.0 });
+                
+                if (size > 0.5) flashOpacity = 0.4;
 
                 const div = document.createElement('div');
                 div.className = `entry ${data.side}`;
-                div.innerHTML = `• ${size.toFixed(4)} BTC @ ${parseFloat(data.price).toLocaleString()}`;
+                div.innerHTML = `📜 ${size.toFixed(4)} BTC @ ${parseFloat(data.price).toLocaleString()}`;
                 logContent.prepend(div);
                 if (logContent.childNodes.length > 12) logContent.lastChild.remove();
             }
         };
     }
 
-    function drawRoom() {
-        const w = window.innerWidth;
-        const h = window.innerHeight;
+    function drawSanctum() {
+        const w = window.innerWidth, h = window.innerHeight;
 
-        // 1. Stone Walls
-        ctx.fillStyle = '#12100d';
+        // 1. Brightened Walls
+        ctx.fillStyle = '#2c241e'; // Warmer brown
         ctx.fillRect(0,0,w,h);
         
-        // Wall texture (Cobblestone look)
-        ctx.strokeStyle = '#0a0907';
-        for(let i=0; i<w; i+=80) {
-            for(let j=0; j<h; j+=40) {
-                ctx.strokeRect(i + (j%80==0?0:40), j, 80, 40);
+        // Wall Detail
+        ctx.strokeStyle = '#3d3229';
+        for(let i=0; i<w; i+=100) {
+            for(let j=0; j<h; j+=50) {
+                ctx.strokeRect(i + (j%100==0?0:50), j, 100, 50);
             }
         }
 
-        // 2. The Window (Looking out at the storm)
-        const winX = w * 0.55, winY = h * 0.1, winW = w * 0.35, winH = h * 0.5;
-        ctx.fillStyle = '#050508'; // Dark outside
+        // 2. Window with Glow
+        const winX = w * 0.55, winY = h * 0.1, winW = w * 0.35, winH = h * 0.45;
+        ctx.fillStyle = '#0a0d14';
         ctx.fillRect(winX, winY, winW, winH);
 
-        // Rain in the window
-        ctx.strokeStyle = 'rgba(100, 150, 255, 0.15)';
-        ctx.lineWidth = 1;
+        // Rain
+        ctx.strokeStyle = 'rgba(150, 200, 255, 0.2)';
         rainDrops.forEach(r => {
             if (r.x > winX && r.x < winX + winW && r.y > winY && r.y < winY + winH) {
-                ctx.beginPath();
-                ctx.moveTo(r.x, r.y);
-                ctx.lineTo(r.x - 2, r.y + 12);
-                ctx.stroke();
+                ctx.beginPath(); ctx.moveTo(r.x, r.y); ctx.lineTo(r.x - 1, r.y + 8); ctx.stroke();
             }
-            r.y += r.v;
-            if (r.y > h) r.y = -20;
+            r.y += r.v; if (r.y > h) r.y = -20;
         });
 
-        // Window Panes (Leaded Glass)
-        ctx.strokeStyle = '#1a1815';
-        ctx.lineWidth = 6;
+        // Window Frame
+        ctx.strokeStyle = '#4a3728'; ctx.lineWidth = 10;
         ctx.strokeRect(winX, winY, winW, winH);
-        ctx.beginPath();
-        ctx.moveTo(winX + winW/2, winY); ctx.lineTo(winX + winW/2, winY + winH);
-        ctx.moveTo(winX, winY + winH/2); ctx.lineTo(winX + winW, winY + winH/2);
-        ctx.stroke();
 
-        // 3. The Desk (Foreground)
-        ctx.fillStyle = '#1e1610';
-        ctx.fillRect(0, h * 0.75, w, h * 0.25);
-        ctx.fillStyle = '#150f0a';
-        ctx.fillRect(0, h * 0.75, w, 10); // Desk edge
+        // 3. The Desk
+        ctx.fillStyle = '#3d2b1f';
+        ctx.fillRect(0, h * 0.7, w, h * 0.3);
+        ctx.fillStyle = '#4a3728';
+        ctx.fillRect(0, h * 0.7, w, 15);
 
-        // 4. Lighting & Effects
-        if (flashOpacity > 0) {
-            ctx.fillStyle = `rgba(200, 230, 255, ${flashOpacity})`;
-            ctx.fillRect(winX, winY, winW, winH); // Flash only the window
-            ctx.fillStyle = `rgba(200, 230, 255, ${flashOpacity * 0.2})`;
-            ctx.fillRect(0,0,w,h); // Slight room flash
-            flashOpacity -= 0.03;
+        // 4. THE COINS (Height based on Price vs Open)
+        const coinCount = Math.max(0, Math.min(20, (btcPrice - startDayPrice) / 10));
+        ctx.fillStyle = '#d4af37';
+        for(let i=0; i<coinCount; i++) {
+            ctx.beginPath();
+            ctx.ellipse(w * 0.7, h*0.7 - (i*5), 30, 10, 0, 0, Math.PI*2);
+            ctx.fill();
+            ctx.stroke();
         }
 
-        // Smoke particles from the pipe
+        // 5. THE TOAD (Sits on the left)
+        ctx.fillStyle = '#4d5d3f';
+        ctx.beginPath();
+        ctx.ellipse(w * 0.1, h * 0.72, 35, 20, 0, 0, Math.PI*2); // Body
+        ctx.fill();
+        ctx.fillStyle = '#2d3d1f';
+        ctx.beginPath(); ctx.arc(w * 0.08, h * 0.7, 8, 0, Math.PI*2); ctx.fill(); // Eyes
+        ctx.beginPath(); ctx.arc(w * 0.12, h * 0.7, 8, 0, Math.PI*2); ctx.fill();
+
+        // 6. THE BUBBLING VIAL
+        const vX = w * 0.4, vY = h * 0.73;
+        ctx.fillStyle = 'rgba(255,255,255,0.2)';
+        ctx.fillRect(vX - 20, vY - 60, 40, 60); // Glass
+        ctx.fillStyle = priceTrend === 1 ? 'rgba(79, 172, 254, 0.6)' : 'rgba(255, 75, 43, 0.6)';
+        ctx.fillRect(vX - 18, vY - 10 - (Math.abs(btcPrice % 40)), 36, Math.abs(btcPrice % 40) + 8);
+        
+        bubbles = bubbles.filter(b => {
+            ctx.fillStyle = 'rgba(255,255,255,0.4)';
+            ctx.beginPath(); ctx.arc(b.x, b.y, 3, 0, Math.PI*2); ctx.fill();
+            b.y -= b.v; b.life -= 0.02;
+            return b.life > 0;
+        });
+
+        // 7. Smoke & Lighting
+        if (flashOpacity > 0) {
+            ctx.fillStyle = `rgba(255, 255, 255, ${flashOpacity})`;
+            ctx.fillRect(winX, winY, winW, winH);
+            flashOpacity -= 0.04;
+        }
+
         smokeParticles = smokeParticles.filter(p => {
-            ctx.fillStyle = `rgba(180, 180, 180, ${p.life * 0.15})`;
-            ctx.beginPath();
-            ctx.arc(p.x, p.y, p.size, 0, Math.PI*2);
-            ctx.fill();
-            p.x += p.vx; p.y += p.vy; p.life -= 0.004;
-            p.size += 0.3;
+            ctx.fillStyle = `rgba(200, 200, 200, ${p.life * 0.3})`;
+            ctx.beginPath(); ctx.arc(p.x, p.y, p.size, 0, Math.PI*2); ctx.fill();
+            p.x += p.vx; p.y += p.vy; p.life -= 0.005; p.size += 0.2;
             return p.life > 0;
         });
 
-        // 5. The Magic Candle
-        const cX = w * 0.25, cY = h * 0.75;
-        // Candle stick
-        ctx.fillStyle = '#332211';
-        ctx.fillRect(cX - 5, cY - 40, 10, 40);
-        // Flame
-        const flicker = Math.sin(Date.now()/80) * 3;
-        const color = btcPrice >= startDayPrice ? '74, 144, 226' : '139, 0, 0';
-        const g = ctx.createRadialGradient(cX + flicker, cY - 55, 0, cX + flicker, cY - 55, 40);
-        g.addColorStop(0, '#fff');
-        g.addColorStop(0.3, `rgba(${color}, 0.9)`);
-        g.addColorStop(1, 'transparent');
-        ctx.fillStyle = g;
-        ctx.beginPath();
-        ctx.arc(cX + flicker, cY - 55, 25, 0, Math.PI*2);
-        ctx.fill();
+        // Magic Aura
+        const g = ctx.createRadialGradient(w*0.5, h*0.5, 0, w*0.5, h*0.5, w*0.8);
+        g.addColorStop(0, 'transparent');
+        g.addColorStop(1, 'rgba(0,0,0,0.4)');
+        ctx.fillStyle = g; ctx.fillRect(0,0,w,h);
     }
 
     function frame() {
-        drawRoom();
+        drawSanctum();
         requestAnimationFrame(frame);
     }
 
