@@ -2,31 +2,34 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>THE RITUAL OF PROOF</title>
+    <title>THE RITUAL: ELECTRIC BLOOD</title>
     <link href="https://fonts.googleapis.com/css2?family=Grenze+Gotisch:wght@400;700&family=IM+Fell+DW+Pica&display=swap" rel="stylesheet">
     <style>
         :root {
             --blood: #8b0000;
-            --ritual-red: #ff3333;
-            --gold: #d4af37;
+            --lightning: #00d4ff;
+            --ritual-red: #ff1111;
             --paper: #e3d3a3;
         }
-        body { margin: 0; overflow: hidden; background: #0a0806; font-family: 'IM Fell DW Pica', serif; color: var(--paper); }
+        body { margin: 0; overflow: hidden; background: #050403; font-family: 'IM Fell DW Pica', serif; }
         
         #altar-ui {
             position: absolute; top: 50px; left: 50px; pointer-events: none; z-index: 100;
         }
-        #price { font-family: 'Grenze Gotisch', serif; font-size: 84px; color: var(--ritual-red); line-height: 0.8; text-shadow: 0 0 20px rgba(139, 0, 0, 0.8); }
-        #hash { font-size: 16px; color: var(--paper); opacity: 0.6; margin-top: 15px; letter-spacing: 2px; }
+        #price { 
+            font-family: 'Grenze Gotisch', serif; font-size: 84px; color: var(--ritual-red); 
+            line-height: 0.8; text-shadow: 0 0 20px var(--blood), 0 0 5px var(--lightning); 
+        }
+        #hash { font-size: 16px; color: var(--lightning); opacity: 0.8; margin-top: 15px; letter-spacing: 2px; font-weight: bold; }
 
         #log {
             position: absolute; bottom: 50px; left: 50px; width: 320px;
             max-height: 250px; overflow: hidden;
             display: flex; flex-direction: column-reverse;
             mask-image: linear-gradient(to top, black 70%, transparent 100%);
-            font-size: 14px; color: var(--ritual-red);
+            font-size: 14px; color: var(--lightning);
         }
-        .entry { padding: 4px 0; border-bottom: 1px solid rgba(139, 0, 0, 0.2); font-weight: bold; }
+        .entry { padding: 4px 0; border-bottom: 1px solid rgba(0, 212, 255, 0.2); text-shadow: 0 0 5px var(--lightning); }
         
         canvas { display: block; }
     </style>
@@ -35,7 +38,7 @@
 
 <div id="altar-ui">
     <div id="price">℥ ...</div>
-    <div id="hash">LEYLINE STRENGTH: DIVINING...</div>
+    <div id="hash">LEYLINE FREQUENCY: DIVINING...</div>
 </div>
 
 <div id="log"></div>
@@ -47,10 +50,10 @@
     
     let state = {
         price: 0,
-        history: [], // Historical price points
-        hash: 742_000_000_000_000_000_000n,
+        history: [],
+        hash: 750_000_000_000_000_000_000n,
         runes: [],
-        stoneSeed: Math.random()
+        bolts: []
     };
 
     function resize() {
@@ -61,7 +64,6 @@
     resize();
 
     async function init() {
-        // Fetch 24h of data (300s intervals = 288 candles)
         const candles = await fetch('https://api.exchange.coinbase.com/products/BTC-USD/candles?granularity=300').then(r => r.json());
         state.history = candles.map(c => c[4]).reverse();
 
@@ -74,118 +76,117 @@
                 document.getElementById('price').innerText = `℥ ${state.price.toLocaleString()}`;
             }
             if (data.type === 'match') {
-                state.runes.push({
-                    x: Math.random() * window.innerWidth,
-                    y: Math.random() * window.innerHeight,
-                    life: 1.0,
-                    size: Math.sqrt(parseFloat(data.size)) * 15
-                });
+                createBolt(window.innerWidth/2, window.innerHeight/2);
+                state.runes.push({ x: Math.random()*window.innerWidth, y: Math.random()*window.innerHeight, life: 1.0, size: 10 });
                 const div = document.createElement('div');
                 div.className = 'entry';
-                div.innerText = `ᛟ ${data.size} BTC @ ${state.price.toLocaleString()}`;
+                div.innerText = `⚡ ${data.size} BTC @ ${state.price.toLocaleString()}`;
                 document.getElementById('log').prepend(div);
-                if (document.getElementById('log').childNodes.length > 15) document.getElementById('log').lastChild.remove();
             }
         };
-        
         setInterval(() => {
             state.hash += BigInt(Math.floor((Math.random()-0.5)*2000000000000000));
             document.getElementById('hash').innerText = `LEYLINE PROOF: ${(state.hash / 1_000_000_000_000_000_000n)} EH/s`;
         }, 2000);
     }
 
+    function createBolt(x, y) {
+        state.bolts.push({ x, y, life: 1.0, segments: [] });
+    }
+
     function drawStone() {
         const w = window.innerWidth, h = window.innerHeight;
-        // Base Stone Color
-        ctx.fillStyle = '#1a1816';
+        ctx.fillStyle = '#0a0908'; // Deep Slate
         ctx.fillRect(0, 0, w, h);
         
-        // Procedural Grain/Cracks
-        ctx.strokeStyle = '#0f0e0d';
-        ctx.lineWidth = 2;
-        ctx.beginPath();
-        for(let i=0; i<50; i++) {
-            ctx.moveTo(Math.random()*w, 0);
-            ctx.lineTo(Math.random()*w, h);
+        // Stone Cracks
+        ctx.strokeStyle = '#151311';
+        ctx.lineWidth = 1;
+        for(let i=0; i<30; i++) {
+            ctx.beginPath();
+            ctx.moveTo(Math.random()*w, 0); ctx.lineTo(Math.random()*w, h);
+            ctx.stroke();
         }
-        ctx.stroke();
 
-        // Blood Motif Borders
-        ctx.strokeStyle = 'rgba(139, 0, 0, 0.3)';
-        ctx.lineWidth = 10;
-        ctx.strokeRect(20, 20, w-40, h-40);
-        ctx.lineWidth = 2;
-        ctx.strokeRect(35, 35, w-70, h-70);
+        // Blood-Red Ritual Border
+        ctx.strokeStyle = 'rgba(139, 0, 0, 0.4)';
+        ctx.lineWidth = 8;
+        ctx.strokeRect(30, 30, w-60, h-60);
     }
 
     function render() {
         const w = window.innerWidth, h = window.innerHeight;
         const cx = w/2, cy = h/2;
+        const orbR = 180;
         
         drawStone();
 
-        // 1. THE BLOOD LEYLINE (Price History)
+        // 1. THE RITUAL CIRCLE
+        ctx.shadowBlur = 15; ctx.shadowColor = '#ff0000';
+        ctx.strokeStyle = '#ff1111';
+        ctx.setLineDash([15, 25]);
+        ctx.beginPath(); ctx.arc(cx, cy, orbR + 20, 0, Math.PI*2); ctx.stroke();
+        ctx.setLineDash([]);
+        ctx.shadowBlur = 0;
+
+        // 2. THE SPINNING SEAL & CENTERED LEYLINE
+        ctx.save();
+        ctx.translate(cx, cy);
+        ctx.rotate(Date.now() * 0.0004);
+        
+        // The Square Seal
+        ctx.strokeStyle = 'rgba(255, 17, 17, 0.6)';
+        ctx.lineWidth = 3;
+        ctx.strokeRect(-orbR/1.4, -orbR/1.4, orbR*1.4, orbR*1.4);
+        
+        // Trapped Leyline (Centered inside the seal)
         if (state.history.length > 0) {
-            ctx.shadowBlur = 15;
-            ctx.shadowColor = '#ff0000';
-            ctx.strokeStyle = 'rgba(255, 0, 0, 0.4)';
-            ctx.lineWidth = 3;
-            ctx.beginPath();
-            
             const min = Math.min(...state.history);
             const max = Math.max(...state.history);
             const range = max - min;
-            const step = w / state.history.length;
-
+            const graphW = orbR * 1.2;
+            const graphH = orbR * 0.8;
+            
+            ctx.rotate(-Date.now() * 0.0004); // Counter-rotate so graph stays horizontal inside seal
+            ctx.beginPath();
+            ctx.strokeStyle = '#00d4ff';
+            ctx.shadowBlur = 10; ctx.shadowColor = '#00d4ff';
+            
+            const step = graphW / state.history.length;
             state.history.forEach((p, i) => {
-                const x = i * step;
-                const y = h - ((p - min) / range * (h * 0.6) + h * 0.2);
+                const x = -graphW/2 + (i * step);
+                const y = graphH/2 - ((p - min) / range * graphH);
                 if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
             });
             ctx.stroke();
             ctx.shadowBlur = 0;
         }
-
-        // 2. THE RITUAL CIRCLE (Scrying Orb)
-        const orbR = 160;
-        const pulse = Math.sin(Date.now() * 0.003) * 5;
-        
-        // Inner Glow
-        const g = ctx.createRadialGradient(cx, cy, 0, cx, cy, orbR + pulse);
-        g.addColorStop(0, 'rgba(139, 0, 0, 0.4)');
-        g.addColorStop(1, 'transparent');
-        ctx.fillStyle = g;
-        ctx.beginPath(); ctx.arc(cx, cy, orbR + pulse, 0, Math.PI*2); ctx.fill();
-
-        // Ritual Carvings
-        ctx.strokeStyle = '#ff3333';
-        ctx.lineWidth = 2;
-        ctx.setLineDash([10, 20]);
-        ctx.beginPath(); ctx.arc(cx, cy, orbR, 0, Math.PI*2); ctx.stroke();
-        ctx.setLineDash([]);
-        
-        // Rotating Core
-        ctx.save();
-        ctx.translate(cx, cy);
-        ctx.rotate(Date.now() * 0.0005);
-        ctx.strokeStyle = 'rgba(255, 51, 51, 0.6)';
-        ctx.strokeRect(-orbR/2, -orbR/2, orbR, orbR);
         ctx.restore();
 
-        // 3. RUNES (Trade Events)
-        state.runes = state.runes.filter(r => {
-            ctx.fillStyle = '#ff3333';
-            ctx.shadowBlur = 10; ctx.shadowColor = '#ff0000';
-            ctx.globalAlpha = r.life;
+        // 3. BLUE LIGHTNING BOLTS (Trade Impacts)
+        state.bolts = state.bolts.filter(b => {
+            ctx.strokeStyle = `rgba(0, 212, 255, ${b.life})`;
+            ctx.lineWidth = 2;
+            ctx.shadowBlur = 10; ctx.shadowColor = '#00d4ff';
             ctx.beginPath();
-            ctx.arc(r.x, r.y, r.size, 0, Math.PI*2);
-            ctx.fill();
-            
-            // Draw a diamond "crack" around it
-            ctx.strokeStyle = '#ff3333';
-            ctx.strokeRect(r.x - r.size, r.y - r.size, r.size*2, r.size*2);
+            let tx = b.x, ty = b.y;
+            ctx.moveTo(tx, ty);
+            for(let i=0; i<5; i++) {
+                tx += (Math.random()-0.5)*100;
+                ty -= 40;
+                ctx.lineTo(tx, ty);
+            }
+            ctx.stroke();
+            b.life -= 0.05;
+            return b.life > 0;
+        });
 
-            r.life -= 0.015;
+        // 4. RUNES
+        state.runes = state.runes.filter(r => {
+            ctx.fillStyle = '#ff1111';
+            ctx.globalAlpha = r.life;
+            ctx.beginPath(); ctx.arc(r.x, r.y, r.size, 0, Math.PI*2); ctx.fill();
+            r.life -= 0.02;
             return r.life > 0;
         });
         ctx.globalAlpha = 1; ctx.shadowBlur = 0;
