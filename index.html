@@ -2,204 +2,150 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>THE SCRYING ORB: SANCTUM V4</title>
-    <link href="https://fonts.googleapis.com/css2?family=Grenze+Gotisch:wght@400;700&family=IM+Fell+DW+Pica:ital@0;1&display=swap" rel="stylesheet">
+    <title>THE LEYLINE RITUAL</title>
+    <link href="https://fonts.googleapis.com/css2?family=Grenze+Gotisch:wght@400;700&family=IM+Fell+DW+Pica&display=swap" rel="stylesheet">
     <style>
         :root {
-            --paper: #e3d3a3;
-            --gold: #ffcc33;
+            --bg: #0a0908;
             --mana: #00d4ff;
-            --blood: #ff4b2b;
-            --leather: #3d2b1f;
+            --gold: #d4af37;
+            --ink: #e3d3a3;
         }
-        body { margin: 0; overflow: hidden; background: #0a0806; font-family: 'IM Fell DW Pica', serif; }
+        body { margin: 0; overflow: hidden; background: var(--bg); font-family: 'IM Fell DW Pica', serif; color: var(--ink); }
         
-        #price-tag {
-            position: absolute; top: 40px; left: 60px;
-            font-family: 'Grenze Gotisch', serif; font-size: 68px;
-            color: var(--gold); text-shadow: 0 0 30px rgba(0,0,0,0.8); z-index: 100;
+        /* Floating HUD */
+        #altar-ui {
+            position: absolute; top: 40px; left: 40px; pointer-events: none;
         }
+        #price { font-family: 'Grenze Gotisch', serif; font-size: 72px; color: var(--gold); line-height: 1; }
+        #hash { font-size: 18px; color: var(--mana); opacity: 0.8; margin-top: 10px; }
 
-        #hash-rate-display {
-            position: absolute; top: 120px; left: 65px;
-            font-family: 'IM Fell DW Pica'; font-size: 20px;
-            color: var(--mana); font-style: italic; z-index: 100;
+        /* The Ritual Log */
+        #log {
+            position: absolute; bottom: 40px; left: 40px; width: 300px;
+            max-height: 200px; overflow: hidden;
+            display: flex; flex-direction: column-reverse;
+            mask-image: linear-gradient(to top, black 80%, transparent 100%);
         }
-
-        /* The Magic Spellbook (Restored & Enhanced) */
-        #spellbook {
-            position: absolute; bottom: 40px; right: 50px; 
-            width: 400px; height: 520px; 
-            background: var(--paper); border: 18px solid var(--leather);
-            border-radius: 5px; padding: 30px; 
-            box-shadow: -10px 20px 60px rgba(0,0,0,0.9), inset 0 0 80px rgba(0,0,0,0.15);
-            transform: perspective(1200px) rotateY(-15deg) rotateX(5deg);
-            z-index: 10;
-            background-image: 
-                linear-gradient(to right, rgba(0,0,0,0.3) 0%, transparent 10%, transparent 90%, rgba(0,0,0,0.3) 100%),
-                url('https://www.transparenttextures.com/patterns/paper-fibers.png');
-        }
-        #spellbook::before { /* The Spine Crease */
-            content: ''; position: absolute; top: 0; left: 50%; width: 3px; height: 100%;
-            background: rgba(0,0,0,0.2); box-shadow: 0 0 10px rgba(0,0,0,0.5);
-        }
-
-        .entry { font-size: 14px; margin-bottom: 8px; border-bottom: 1px solid rgba(0,0,0,0.05); color: #2b1a0f; font-weight: bold; }
-        canvas { display: block; filter: saturate(1.1) contrast(1.1); }
+        .rune-entry { font-size: 13px; padding: 4px 0; border-bottom: 1px solid rgba(227, 211, 163, 0.1); }
+        
+        canvas { display: block; }
     </style>
 </head>
 <body>
 
-<div id="price-tag">℥ ...</div>
-<div id="hash-rate-display">Divining Leyline Strength...</div>
-
-<div id="spellbook">
-    <div style="font-family: 'Grenze Gotisch'; font-size: 28px; text-align: center; margin-bottom: 15px; border-bottom: 2px double var(--leather);">Liber Matchmaking</div>
-    <div id="log-content"></div>
+<div id="altar-ui">
+    <div id="price">℥ ...</div>
+    <div id="hash">LEYLINE: CALCULATING EH/S</div>
 </div>
 
+<div id="log"></div>
 <canvas id="screen"></canvas>
 
 <script>
     const canvas = document.getElementById('screen');
     const ctx = canvas.getContext('2d');
-    
-    let state = {
-        btcPrice: 0.0,
-        hashRate: 720_000_000_000_000_000_000n,
-        startDayPrice: 0.0,
-        orbRotation: 0,
-        flash: 0
-    };
-
-    let smoke = [], rain = [], coinHeight = 0;
+    let state = { price: 0, hash: 730_000_000_000_000_000_000n, history: [] };
+    let runes = [];
 
     function resize() {
-        canvas.width = window.innerWidth;
-        canvas.height = window.innerHeight;
+        canvas.width = window.innerWidth * window.devicePixelRatio;
+        canvas.height = window.innerHeight * window.devicePixelRatio;
+        ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
     }
     window.addEventListener('resize', resize);
     resize();
 
-    // Setup Rain
-    for(let i=0; i<120; i++) rain.push({x: Math.random()*window.innerWidth, y: Math.random()*window.innerHeight, v: 8+Math.random()*8});
-
     async function init() {
-        const stats = await fetch('https://api.exchange.coinbase.com/products/BTC-USD/stats').then(r => r.json());
-        state.startDayPrice = parseFloat(stats.open);
+        // Fetch historical data for the "Leyline"
+        const candles = await fetch('https://api.exchange.coinbase.com/products/BTC-USD/candles?granularity=300').then(r => r.json());
+        state.history = candles.map(c => c[4]).reverse();
 
         const ws = new WebSocket('wss://ws-feed.exchange.coinbase.com');
         ws.onopen = () => ws.send(JSON.stringify({ type: "subscribe", channels: ["ticker", "matches"], product_ids: ["BTC-USD"] }));
         ws.onmessage = (e) => {
             const data = JSON.parse(e.data);
             if (data.type === 'ticker') {
-                state.btcPrice = parseFloat(data.price);
-                document.getElementById('price-tag').innerText = `℥ ${state.btcPrice.toLocaleString()}`;
-                document.getElementById('price-tag').style.color = state.btcPrice >= state.startDayPrice ? '#00d4ff' : '#ff4b2b';
-                // Coins represent price movement: 1 coin per $200 gained today
-                coinHeight = Math.max(0, (state.btcPrice - state.startDayPrice) / 200);
+                state.price = parseFloat(data.price);
+                document.getElementById('price').innerText = `℥ ${state.price.toLocaleString()}`;
             }
             if (data.type === 'match') {
+                // Create a "Rune" particle
+                runes.push({
+                    x: Math.random() * window.innerWidth,
+                    y: Math.random() * window.innerHeight,
+                    size: parseFloat(data.size),
+                    life: 1.0,
+                    color: data.side === 'buy' ? '#00d4ff' : '#ff4b2b'
+                });
                 const div = document.createElement('div');
-                div.className = 'entry';
-                div.innerHTML = `📜 ${parseFloat(data.size).toFixed(4)} Transmuted @ ${parseFloat(data.price).toLocaleString()}`;
-                document.getElementById('log-content').prepend(div);
-                if (document.getElementById('log-content').childNodes.length > 12) document.getElementById('log-content').lastChild.remove();
-                
-                // Add Pipe Puff on trade
-                for(let i=0; i<3; i++) smoke.push({x: window.innerWidth * 0.1, y: window.innerHeight * 0.8, vx: Math.random()*1, vy: -1.5, life: 1, s: 10});
-                if (parseFloat(data.size) > 0.5) state.flash = 0.5;
+                div.className = 'rune-entry';
+                div.innerText = `ᚱ ${data.size} @ ${data.price}`;
+                document.getElementById('log').prepend(div);
             }
         };
-        setInterval(() => {
-            state.hashRate += BigInt(Math.floor((Math.random()-0.5)*1000000000000000));
-            document.getElementById('hash-rate-display').innerText = `Leyline Proof: ${(state.hashRate / 1_000_000_000_000_000_000n)} EH/s`;
-        }, 3000);
     }
 
-    function drawSanctum() {
+    function render() {
         const w = window.innerWidth, h = window.innerHeight;
+        const cx = w/2, cy = h/2;
 
-        // 1. Forest Window (Background Layer)
-        const winX = w*0.55, winY = h*0.1, winW = w*0.35, winH = h*0.45;
-        ctx.fillStyle = '#050a05'; // Dark Forest Green
-        ctx.fillRect(winX, winY, winW, winH);
+        // Dark Surface
+        ctx.fillStyle = '#0a0908';
+        ctx.fillRect(0, 0, w, h);
+
+        // 1. THE LEYLINE (The Data Stream)
+        ctx.strokeStyle = 'rgba(212, 175, 55, 0.15)';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        const step = w / state.history.length;
+        state.history.forEach((p, i) => {
+            const x = i * step;
+            const y = h * 0.5 + (Math.sin(i * 0.1 + Date.now()*0.001) * 20); // Subtle magical weave
+            if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+        });
+        ctx.stroke();
+
+        // 2. THE SCRYING ORB (Minimalist Pulse)
+        const orbRadius = 150;
+        const pulse = Math.sin(Date.now() * 0.002) * 10;
         
-        // Distant Trees (Silhouettes)
-        ctx.fillStyle = '#020502';
-        for(let i=0; i<6; i++) {
+        const g = ctx.createRadialGradient(cx, cy, 0, cx, cy, orbRadius + pulse);
+        g.addColorStop(0, 'rgba(0, 212, 255, 0.1)');
+        g.addColorStop(1, 'transparent');
+        ctx.fillStyle = g;
+        ctx.beginPath(); ctx.arc(cx, cy, orbRadius + pulse, 0, Math.PI*2); ctx.fill();
+
+        ctx.strokeStyle = 'rgba(0, 212, 255, 0.4)';
+        ctx.lineWidth = 2;
+        ctx.setLineDash([5, 15]);
+        ctx.beginPath(); ctx.arc(cx, cy, orbRadius, 0, Math.PI*2); ctx.stroke();
+        ctx.setLineDash([]);
+
+        // 3. RUNES (Trade Particles)
+        runes = runes.filter(r => {
+            ctx.fillStyle = r.color;
+            ctx.globalAlpha = r.life;
+            // Draw a small diamond rune
             ctx.beginPath();
-            ctx.moveTo(winX + (i*60), winY + winH);
-            ctx.lineTo(winX + (i*60) + 30, winY + 50);
-            ctx.lineTo(winX + (i*60) + 60, winY + winH);
+            ctx.moveTo(r.x, r.y - 10);
+            ctx.lineTo(r.x + 10, r.y);
+            ctx.lineTo(r.x, r.y + 10);
+            ctx.lineTo(r.x - 10, r.y);
             ctx.fill();
-        }
-
-        // Window Rain
-        ctx.strokeStyle = 'rgba(150, 200, 255, 0.15)';
-        rain.forEach(r => {
-            if(r.x > winX && r.x < winX+winW && r.y > winY && r.y < winY+winH) {
-                ctx.beginPath(); ctx.moveTo(r.x, r.y); ctx.lineTo(r.x-1, r.y+10); ctx.stroke();
-            }
-            r.y += r.v; if(r.y > h) r.y = -10;
+            
+            // Move toward center orb
+            r.x += (cx - r.x) * 0.02;
+            r.y += (cy - r.y) * 0.02;
+            r.life -= 0.01;
+            return r.life > 0;
         });
+        ctx.globalAlpha = 1;
 
-        // 2. Stone Walls
-        ctx.fillStyle = '#1a1612';
-        ctx.fillRect(0,0,w,h*0.75);
-        ctx.clearRect(winX, winY, winW, winH); // Cutout for window
-        ctx.strokeStyle = '#0f0c0a'; ctx.lineWidth = 15; ctx.strokeRect(winX, winY, winW, winH);
-
-        // 3. Desk & Gold
-        ctx.fillStyle = '#2a1f18'; ctx.fillRect(0, h*0.75, w, h*0.25);
-        ctx.fillStyle = '#d4af37'; ctx.strokeStyle = '#4a3728'; ctx.lineWidth = 1;
-        for(let i=0; i<coinHeight; i++) {
-            ctx.beginPath(); ctx.ellipse(w*0.2, h*0.75 - (i*4), 30, 10, 0, 0, Math.PI*2); ctx.fill(); ctx.stroke();
-        }
-
-        // 4. Wizard's Pipe (Bottom Left)
-        ctx.fillStyle = '#3d2b1f';
-        ctx.beginPath(); ctx.arc(w*0.08, h*0.85, 20, 0, Math.PI*2); ctx.fill(); // Bowl
-        ctx.fillRect(w*0.02, h*0.84, w*0.06, 8); // Stem
-
-        smoke = smoke.filter(p => {
-            ctx.fillStyle = `rgba(200,200,200,${p.life * 0.3})`;
-            ctx.beginPath(); ctx.arc(p.x, p.y, p.s, 0, Math.PI*2); ctx.fill();
-            p.x += p.vx; p.y += p.vy; p.life -= 0.005; p.s += 0.2;
-            return p.life > 0;
-        });
-
-        // 5. The Scrying Orb (Focal Point)
-        const cx = w/2, cy = h*0.45, r = 140;
-        state.orbRotation += 0.015;
-        
-        // Orb Glow
-        const g = ctx.createRadialGradient(cx, cy, 0, cx, cy, r*1.5);
-        g.addColorStop(0, 'rgba(0, 212, 255, 0.2)'); g.addColorStop(1, 'transparent');
-        ctx.fillStyle = g; ctx.beginPath(); ctx.arc(cx, cy, r*1.5, 0, Math.PI*2); ctx.fill();
-
-        // Nebula
-        ctx.save(); ctx.translate(cx, cy); ctx.rotate(state.orbRotation);
-        ctx.fillStyle = 'rgba(0, 212, 255, 0.1)';
-        for(let i=0; i<3; i++) {
-            ctx.rotate(Math.PI/1.5);
-            ctx.beginPath(); ctx.ellipse(0, 0, r*0.8, r*0.3, 0, 0, Math.PI*2); ctx.fill();
-        }
-        ctx.restore();
-
-        // Glass Shell
-        ctx.strokeStyle = 'rgba(255,255,255,0.3)'; ctx.lineWidth = 2;
-        ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI*2); ctx.stroke();
-
-        // 6. Lightning Flash
-        if(state.flash > 0) {
-            ctx.fillStyle = `rgba(255,255,255,${state.flash})`; ctx.fillRect(winX, winY, winW, winH);
-            state.flash -= 0.02;
-        }
+        requestAnimationFrame(render);
     }
 
-    function frame() { drawSanctum(); requestAnimationFrame(frame); }
-    init(); frame();
+    init(); render();
 </script>
 </body>
 </html>
