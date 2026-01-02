@@ -2,126 +2,81 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>THE ALCHEMIST'S DIVINATION</title>
+    <title>THE ALCHEMIST'S SANCTUM</title>
     <link href="https://fonts.googleapis.com/css2?family=Grenze+Gotisch:wght@400;700&family=IM+Fell+DW+Pica:ital@0;1&display=swap" rel="stylesheet">
     <style>
         :root {
             --paper: #c9b087;
             --ink: #2b1a0f;
-            --gold: #d4af37;
             --mana: #4a90e2;
             --blood: #8b0000;
         }
         body { 
-            margin: 0; overflow: hidden; background: #0a0806; 
+            margin: 0; overflow: hidden; background: #050403; 
             font-family: 'IM Fell DW Pica', serif; color: var(--paper); 
         }
 
-        /* The Wizard's UI - Parchment Style */
-        .parchment-panel {
-            position: absolute; background: #1a1510; border: 2px solid #3d2b1f;
-            box-shadow: inset 0 0 30px #000, 5px 5px 15px rgba(0,0,0,0.8);
-            z-index: 100; padding: 20px;
+        /* The Spellbook (Log) */
+        #spellbook {
+            position: absolute; bottom: 40px; right: 40px; 
+            width: 320px; height: 400px; 
+            background: #1a1510; border: 8px solid #3d2b1f;
+            padding: 30px; box-shadow: 20px 20px 50px #000;
+            transform: rotate(2deg);
+            background-image: radial-gradient(circle at center, #2a2015 0%, #1a1510 100%);
+        }
+        #spellbook::before { content: ''; position: absolute; top: 0; left: 50%; width: 2px; height: 100%; background: rgba(0,0,0,0.5); }
+
+        #price-tag {
+            position: absolute; top: 50px; left: 50px;
+            font-family: 'Grenze Gotisch', serif; font-size: 52px;
+            color: var(--paper); text-shadow: 0 0 20px rgba(255,255,255,0.1);
         }
 
-        #ui-top-left { top: 30px; left: 30px; border-top: 4px solid var(--gold); min-width: 250px; }
-        #ui-bottom-log { 
-            bottom: 30px; left: 30px; width: 380px; height: 200px; 
-            overflow: hidden; display: flex; flex-direction: column-reverse;
-            font-size: 13px; font-style: italic; line-height: 1.6;
-            mask-image: linear-gradient(to top, black 85%, transparent 100%);
-        }
+        .entry { font-size: 14px; margin-bottom: 8px; border-bottom: 1px solid rgba(255,255,255,0.05); }
+        .buy { color: var(--mana); }
+        .sell { color: var(--blood); }
 
-        #price { font-family: 'Grenze Gotisch', serif; font-size: 42px; color: var(--gold); margin: 0; text-shadow: 2px 2px 0px #000; }
-        
-        #view-toggle {
-            position: absolute; top: 30px; right: 30px; z-index: 1000;
-            background: #2e1a12; color: var(--paper); border: 2px solid var(--gold);
-            padding: 12px 24px; cursor: pointer; font-family: 'Grenze Gotisch';
-            font-size: 16px; text-transform: uppercase; transition: 0.3s;
-        }
-        #view-toggle:hover { background: var(--gold); color: #000; box-shadow: 0 0 20px var(--gold); }
-
-        #data-tip {
-            position: absolute; background: var(--paper); color: var(--ink);
-            padding: 8px 12px; border: 1px solid #5d4037; font-size: 14px;
-            font-weight: bold; pointer-events: none; display: none; z-index: 2000;
-            box-shadow: 4px 4px 0px rgba(0,0,0,0.5);
-        }
-
-        .log-entry { border-bottom: 1px solid rgba(255,255,255,0.05); padding: 4px 0; }
-        .log-transmutation { color: var(--mana); }
-        .log-sacrifice { color: #888; }
-        .log-whale { color: #ffeb3b; text-decoration: underline; }
-
-        canvas { display: block; filter: contrast(1.1) brightness(0.9) sepia(0.1); }
+        canvas { display: block; filter: contrast(1.1) brightness(0.8); }
     </style>
 </head>
 <body>
 
-<div id="data-tip">VALUE: 0.00 Gold</div>
-<button id="view-toggle">Enter the Leyline</button>
+<div id="price-tag">℥ ...</div>
 
-<div id="ui-top-left" class="parchment-panel">
-    <div style="font-size: 10px; text-transform: uppercase; letter-spacing: 3px; color: #6e5a46;">Arcane Flux Reading</div>
-    <div id="price">℥ ...</div>
+<div id="spellbook">
+    <div style="font-family: 'Grenze Gotisch'; font-size: 20px; text-align: center; margin-bottom: 20px;">The Ledger of Transmutation</div>
+    <div id="log-content"></div>
 </div>
-
-<div id="ui-bottom-log" class="parchment-panel"></div>
 
 <canvas id="screen"></canvas>
 
 <script>
     const canvas = document.getElementById('screen');
     const ctx = canvas.getContext('2d');
-    const priceDisplay = document.getElementById('price');
-    const logContainer = document.getElementById('ui-bottom-log');
-    const dataTip = document.getElementById('data-tip');
-    const viewBtn = document.getElementById('view-toggle');
+    const priceDisplay = document.getElementById('price-tag');
+    const logContent = document.getElementById('log-content');
 
-    let btcPrice = 0, startDayPrice = 0, dpr = window.devicePixelRatio || 1;
-    let runes = [], spirits = [], sparks = [];
-    let rotation = 0, currentView = 'sanctum', mouseX = 0, mouseY = 0;
+    let btcPrice = 0, startDayPrice = 0;
+    let smokeParticles = [], rainDrops = [];
+    let flashOpacity = 0;
 
     function resize() {
-        dpr = window.devicePixelRatio || 1;
-        canvas.width = window.innerWidth * dpr;
-        canvas.height = window.innerHeight * dpr;
-        ctx.scale(dpr, dpr);
+        canvas.width = window.innerWidth * window.devicePixelRatio;
+        canvas.height = window.innerHeight * window.devicePixelRatio;
+        ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
     }
     window.addEventListener('resize', resize);
-    window.addEventListener('mousemove', (e) => { mouseX = e.clientX; mouseY = e.clientY; });
     resize();
 
-    viewBtn.onclick = () => {
-        currentView = (currentView === 'sanctum') ? 'leyline' : 'sanctum';
-        viewBtn.innerText = currentView === 'sanctum' ? 'Enter the Leyline' : 'Return to Sanctum';
-    };
-
-    function addLog(side, size, price) {
-        const val = size * price;
-        const div = document.createElement('div');
-        div.className = 'log-entry ' + (side === 'buy' ? 'log-transmutation' : 'log-sacrifice');
-        if (val > 10000) div.className += ' log-whale';
-        div.innerHTML = `• ${size.toFixed(4)} BTC ${side === 'buy' ? 'transmuted' : 'sacrificed'} at ${price.toLocaleString()} gold`;
-        logContainer.prepend(div);
-        if (logContainer.childNodes.length > 15) logContainer.lastChild.remove();
+    // Initialize Rain
+    for(let i=0; i<100; i++) {
+        rainDrops.push({ x: Math.random()*window.innerWidth, y: Math.random()*window.innerHeight, v: 10 + Math.random()*10 });
     }
 
     async function init() {
         const stats = await fetch('https://api.exchange.coinbase.com/products/BTC-USD/stats').then(r => r.json());
         startDayPrice = parseFloat(stats.open);
-        const candles = await fetch('https://api.exchange.coinbase.com/products/BTC-USD/candles?granularity=300').then(r => r.json());
-        const prices = candles.map(c => c[4]).reverse();
-        const minP = Math.min(...prices), maxP = Math.max(...prices);
-
-        runes = prices.map((p, i) => ({
-            p, angle: i * 0.15,
-            baseDist: 70 + (i * 1.8),
-            variance: ((p - minP) / (maxP - minP)) * 240,
-            size: 1.5 + Math.random() * 2,
-            screenX: 0, screenY: 0
-        }));
 
         const ws = new WebSocket('wss://ws-feed.exchange.coinbase.com');
         ws.onopen = () => ws.send(JSON.stringify({ type: "subscribe", channels: ["ticker", "matches"], product_ids: ["BTC-USD"] }));
@@ -133,94 +88,90 @@
                 priceDisplay.style.color = btcPrice >= startDayPrice ? '#4a90e2' : '#8b0000';
             }
             if (data.type === 'match') {
-                addLog(data.side, parseFloat(data.size), parseFloat(data.price));
-                if (currentView === 'leyline') {
-                    spirits.push({ 
-                        x: Math.random()*window.innerWidth, 
-                        y: data.side==='buy'?window.innerHeight+50:-50, 
-                        side: data.side, v: 2+Math.random()*3, 
-                        size: 3 + (parseFloat(data.size)*25)
+                const size = parseFloat(data.size);
+                // Create Smoke Puff for every trade
+                for(let i=0; i<5; i++) {
+                    smokeParticles.push({
+                        x: window.innerWidth * 0.2, // From the "pipe"
+                        y: window.innerHeight * 0.7,
+                        vx: (Math.random() - 0.2) * 2,
+                        vy: -Math.random() * 2 - 1,
+                        size: 5 + Math.random() * 15,
+                        life: 1.0
                     });
                 }
+                // Lightning for big trades
+                if (size > 0.5) flashOpacity = 0.5;
+
+                const div = document.createElement('div');
+                div.className = `entry ${data.side}`;
+                div.innerHTML = `• ${size.toFixed(4)} BTC @ ${parseFloat(data.price).toLocaleString()}`;
+                logContent.prepend(div);
+                if (logContent.childNodes.length > 10) logContent.lastChild.remove();
             }
         };
     }
 
-    function render() {
-        ctx.fillStyle = '#0a0806'; // Dark study
-        ctx.fillRect(0, 0, window.innerWidth, window.innerHeight);
-        if (btcPrice === 0) return requestAnimationFrame(render);
+    function drawSanctum() {
+        const w = window.innerWidth;
+        const h = window.innerHeight;
 
-        const cx = window.innerWidth / 2, cy = window.innerHeight / 2;
-        rotation += 0.0007;
-
-        // 1. Arcane Leylines (The connections)
-        ctx.strokeStyle = 'rgba(212, 175, 55, 0.15)';
-        ctx.lineWidth = 1;
-        ctx.beginPath();
-        runes.forEach((s, i) => {
-            const a = s.angle + rotation;
-            const d = s.baseDist + s.variance;
-            const x = cx + Math.cos(a) * d * 2.2;
-            const y = cy + Math.sin(a) * d * 0.9;
-            s.screenX = x; s.screenY = y;
-            if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
-        });
-        ctx.stroke();
-
-        // 2. Floating Runes & Tooltips
-        let hovered = null;
-        runes.forEach(s => {
-            const isH = Math.hypot(mouseX - s.screenX, mouseY - s.screenY) < 10;
-            ctx.fillStyle = isH ? "#fff" : "rgba(212, 175, 55, 0.5)";
-            if (isH) hovered = s.p;
-            ctx.beginPath(); ctx.arc(s.screenX, s.screenY, isH ? 5 : s.size, 0, Math.PI*2); ctx.fill();
+        // 1. Outside the Window (Rain)
+        ctx.fillStyle = '#050508';
+        ctx.fillRect(w*0.5, h*0.1, w*0.4, h*0.5); // Window Frame
+        
+        ctx.strokeStyle = 'rgba(100, 150, 255, 0.2)';
+        rainDrops.forEach(r => {
+            ctx.beginPath();
+            ctx.moveTo(r.x, r.y);
+            ctx.lineTo(r.x - 2, r.y + 10);
+            ctx.stroke();
+            r.y += r.v;
+            if (r.y > h) r.y = -10;
         });
 
-        if (hovered) {
-            dataTip.style.display = 'block';
-            dataTip.style.left = (mouseX + 20) + 'px'; dataTip.style.top = (mouseY - 20) + 'px';
-            dataTip.innerText = `DIVINED VALUE: ${hovered.toLocaleString()} gold`;
-        } else { dataTip.style.display = 'none'; }
-
-        // 3. The Scrying Pool (Sanctum) vs The Leyline (Battle)
-        if (currentView === 'sanctum') {
-            const p = 50 + Math.sin(Date.now()/700)*8;
-            const g = ctx.createRadialGradient(cx, cy, 0, cx, cy, p*2);
-            g.addColorStop(0, 'rgba(74, 144, 226, 0.4)'); g.addColorStop(1, 'transparent');
-            ctx.fillStyle = g; ctx.beginPath(); ctx.arc(cx, cy, p*2, 0, Math.PI*2); ctx.fill();
-        } else {
-            const midY = window.innerHeight / 2;
-            ctx.strokeStyle = 'rgba(74, 144, 226, 0.4)';
-            ctx.setLineDash([5, 15]); ctx.beginPath(); ctx.moveTo(0, midY); ctx.lineTo(window.innerWidth, midY); ctx.stroke();
-            ctx.setLineDash([]);
-
-            spirits = spirits.filter(s => {
-                ctx.fillStyle = s.side === 'buy' ? '#4a90e2' : '#8b0000';
-                // Draw a flame-like shape
-                ctx.beginPath(); ctx.arc(s.x, s.y, s.size, 0, Math.PI*2); ctx.fill();
-                s.y += s.side === 'buy' ? -s.v : s.v;
-                
-                if (Math.abs(s.y - midY) < 10) {
-                    for(let i=0; i<8; i++) sparks.push({ x: s.x, y: midY, vx: (Math.random()-0.5)*10, vy: (Math.random()-0.5)*10, life: 1.0, color: ctx.fillStyle });
-                    return false;
-                }
-                return s.y > -100 && s.y < window.innerHeight+100;
-            });
-
-            sparks = sparks.filter(e => {
-                ctx.globalAlpha = e.life; ctx.fillStyle = e.color;
-                ctx.fillRect(e.x, e.y, 2, 2);
-                e.x += e.vx; e.y += e.vy; e.life -= 0.03;
-                return e.life > 0;
-            });
-            ctx.globalAlpha = 1;
+        // Lightning Flash
+        if (flashOpacity > 0) {
+            ctx.fillStyle = `rgba(200, 230, 255, ${flashOpacity})`;
+            ctx.fillRect(0,0,w,h);
+            flashOpacity -= 0.02;
         }
 
-        requestAnimationFrame(render);
+        // 2. The Desk & Pipe Smoke
+        smokeParticles = smokeParticles.filter(p => {
+            ctx.fillStyle = `rgba(200, 200, 200, ${p.life * 0.2})`;
+            ctx.beginPath();
+            ctx.arc(p.x, p.y, p.size, 0, Math.PI*2);
+            ctx.fill();
+            p.x += p.vx; p.y += p.vy; p.life -= 0.005;
+            p.size += 0.2;
+            return p.life > 0;
+        });
+
+        // 3. The Candle Flame (Price Indicator)
+        const flameY = h * 0.6;
+        const flameX = w * 0.5;
+        const flicker = Math.sin(Date.now()/100) * 2;
+        const flameColor = btcPrice >= startDayPrice ? '74, 144, 226' : '139, 0, 0';
+        
+        const g = ctx.createRadialGradient(flameX, flameY, 0, flameX, flameY, 30);
+        g.addColorStop(0, '#fff');
+        g.addColorStop(0.4, `rgba(${flameColor}, 0.8)`);
+        g.addColorStop(1, 'transparent');
+        ctx.fillStyle = g;
+        ctx.beginPath();
+        ctx.arc(flameX + flicker, flameY, 15, 0, Math.PI*2);
+        ctx.fill();
     }
 
-    init(); render();
+    function frame() {
+        ctx.fillStyle = '#0a0806';
+        ctx.fillRect(0, 0, window.innerWidth, window.innerHeight);
+        drawSanctum();
+        requestAnimationFrame(frame);
+    }
+
+    init(); frame();
 </script>
 </body>
 </html>
