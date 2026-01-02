@@ -2,14 +2,14 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>BITSCRY_V1.3_ZODIAC_DIFF</title>
+    <title>BITSCRY_V1.4_RESURRECTION</title>
     <style>
         :root {
             --white: #FFFFFF; --blue: #0000AA; --red: #AA0000; --cyan: #00AAAA;
             --purple: #AA00AA; --yellow: #FFFF55; --black: #000000; --green: #00AA00;
         }
         body { 
-            margin: 0; background-color: #111; 
+            margin: 0; background-color: #000; 
             font-family: "Courier New", monospace;
             display: flex; justify-content: center; align-items: center; height: 100vh;
         }
@@ -34,30 +34,30 @@
 
 <div id="monitor">
     <div id="top-bar">
-        <span>TempleOS - BITSCRY_V1.3 - CELESTIAL_DIFFICULTY</span>
+        <span>TempleOS - BITSCRY_V1.4 - DATA_SYNC_OK</span>
         <span id="clock">00:00:00</span>
     </div>
 
     <div class="panel" id="sisyphus-panel">
-        <div class="header">SISYPHUS.EXE</div>
+        <div class="header">SISYPHUS.EXE [MEMPOOL]</div>
+        <div style="padding: 5px; font-size: 10px; color: var(--red);">UNCONFIRMED_TX: <span id="mempool-val">...</span></div>
         <canvas id="sisyphus-canvas"></canvas>
     </div>
 
     <div class="panel" id="oracle-panel">
-        <div class="header">THE_ASTRONOMICAL_DIFF_ADJUSTMENT</div>
+        <div class="header">THE_ASTRONOMICAL_ORACLE</div>
         <div id="diff-hud">
-            DIFF: <span id="diff-val" style="color:var(--red)">0</span><br>
-            HOUSE: <span id="house-val" style="color:var(--blue)">...</span>
+            DIFF: <span id="diff-val" style="color:var(--red)">SYNCING</span><br>
+            HOUSE: <span id="house-val" style="color:var(--blue)">ARIES</span>
         </div>
         <canvas id="oracle-canvas"></canvas>
     </div>
 
-    <div class="panel" id="scripture-panel" style="grid-column: 2; padding:15px; border-left:none;">
-        <div style="color:var(--purple); font-weight:bold; border-bottom:1px solid var(--purple)">HEAVENLY_STATS</div>
-        <div id="stats" style="font-size: 12px; margin-top:5px; line-height:1.6;">
-            [+] PRICE: $<span id="price">...</span><br>
-            [+] HASHRATE: <span id="hash">...</span> EH/s<br>
-            [+] ORACLE_STATE: <span style="color:var(--green)">SYNCHRONIZED</span>
+    <div class="panel" id="scripture-panel" style="grid-column: 2; padding:10px; border-left:none;">
+        <div style="color:var(--purple); font-weight:bold; font-size:12px;">DIVINE_TELEMETRY</div>
+        <div id="stats" style="font-size: 11px; margin-top:5px; color: var(--black);">
+            PRICE: <span id="price" style="color:var(--red); font-weight:bold;">$0.00</span><br>
+            STATUS: <span id="status" style="color:var(--green)">WAITING_FOR_ORACLE</span>
         </div>
     </div>
 </div>
@@ -70,10 +70,11 @@
     
     let state = {
         price: 0,
-        history: [],
+        history: [60000, 61000, 60500, 62000, 63000, 62500, 64000, 63500, 65000, 64500, 66000, 65500], // Fallback data
         ticks: 0,
-        difficulty: 1,
+        difficulty: 80000000000000,
         diffScale: 0.005,
+        mempool: 0,
         zodiacs: ["♈","♉","♊","♋","♌","♍","♎","♏","♐","♑","♒","♓"],
         houses: ["Aries", "Taurus", "Gemini", "Cancer", "Leo", "Virgo", "Libra", "Scorpio", "Sagittarius", "Capricorn", "Aquarius", "Pisces"]
     };
@@ -86,30 +87,35 @@
     resize();
 
     async function fetchData() {
-        // Fetch real difficulty
-        const block = await fetch('https://mempool.space/api/blocks/tip/height').then(r => r.json());
-        const bHash = await fetch(`https://mempool.space/api/block-height/${block}`).then(r => r.text());
-        const details = await fetch(`https://mempool.space/api/block/${bHash}`).then(r => r.json());
-        
-        state.difficulty = details.difficulty;
-        // Map difficulty to a manageable rotation scale (roughly 0.001 to 0.02)
-        state.diffScale = Math.min(0.05, (state.difficulty / 1e14) * 0.01);
-        
-        document.getElementById('diff-val').innerText = (state.difficulty / 1e12).toFixed(2) + "T";
-        
-        const candles = await fetch('https://api.exchange.coinbase.com/products/BTC-USD/candles?granularity=3600').then(r => r.json());
-        state.history = candles.slice(0, 12).map(c => c[4]).reverse();
-    }
+        try {
+            // 1. Fetch Difficulty & Mempool
+            const memRes = await fetch('https://mempool.space/api/mempool');
+            const memData = await memRes.json();
+            state.mempool = memData.count;
+            document.getElementById('mempool-val').innerText = state.mempool.toLocaleString();
 
-    const ws = new WebSocket('wss://ws-feed.exchange.coinbase.com');
-    ws.onopen = () => ws.send(JSON.stringify({ type: "subscribe", channels: ["ticker"], product_ids: ["BTC-USD"] }));
-    ws.onmessage = (e) => {
-        const data = JSON.parse(e.data);
-        if (data.type === 'ticker') {
-            state.price = parseFloat(data.price);
-            document.getElementById('price').innerText = state.price.toLocaleString();
+            const diffRes = await fetch('https://mempool.space/api/blockchain/info');
+            const diffData = await diffRes.json();
+            state.difficulty = diffData.difficulty || 80e12;
+            state.diffScale = Math.min(0.04, (state.difficulty / 1e15) + 0.005);
+            document.getElementById('diff-val').innerText = (state.difficulty / 1e12).toFixed(1) + "T";
+
+            // 2. Fetch Price History
+            const pRes = await fetch('https://api.exchange.coinbase.com/products/BTC-USD/ticker');
+            const pData = await pRes.json();
+            state.price = parseFloat(pData.price);
+            document.getElementById('price').innerText = "$" + state.price.toLocaleString();
+            document.getElementById('status').innerText = "DIVINE_LINK_ESTABLISHED";
+            
+            // Add current price to history to keep flames alive
+            state.history.push(state.price);
+            if(state.history.length > 12) state.history.shift();
+
+        } catch (e) {
+            console.error("Divine Error:", e);
+            document.getElementById('status').innerText = "CONNECTION_WEAK_RETRYING";
         }
-    };
+    }
 
     function render() {
         state.ticks++;
@@ -121,21 +127,14 @@
         sCtx.fillStyle = "#FFFFFF"; sCtx.fillRect(0,0,sw,sh);
         sCtx.strokeStyle = "#000"; sCtx.lineWidth = 4;
         sCtx.beginPath(); sCtx.moveTo(0, sh-40); sCtx.lineTo(sw, sh-180); sCtx.stroke();
-        let sx = (state.ticks * 0.5) % (sw + 60);
+        let sx = (state.ticks * 0.4) % (sw + 60);
         let sy = (sh-40) - (sx * (140/sw));
         sCtx.fillStyle = "#000"; sCtx.font = "bold 20px Courier"; sCtx.fillText("<O/", sx-20, sy-10);
         sCtx.fillStyle = "#AAA"; sCtx.beginPath(); sCtx.arc(sx+30, sy-30, 30, 0, Math.PI*2); sCtx.fill(); sCtx.stroke();
 
-        // --- ORACLE RENDER (Zodiac + Flames) ---
+        // --- ORACLE RENDER ---
         oCtx.fillStyle = "#FFFFFF"; oCtx.fillRect(0,0,ow,oh);
         
-        // Celestial Grid
-        oCtx.strokeStyle = "rgba(0,0,170,0.1)"; oCtx.beginPath();
-        for(let i=0; i<ow; i+=20) { oCtx.moveTo(i,0); oCtx.lineTo(i,oh); }
-        for(let i=0; i<oh; i+=20) { oCtx.moveTo(0,i); oCtx.lineTo(ow,i); }
-        oCtx.stroke();
-
-        // Rotating Zodiac
         const rotation = state.ticks * state.diffScale;
         state.zodiacs.forEach((z, i) => {
             const angle = (i * Math.PI * 2) / 12 + rotation;
@@ -143,20 +142,18 @@
             const x = cx + Math.cos(angle) * r;
             const y = cy + Math.sin(angle) * r;
             
-            // Determine active house (top of the wheel)
             const normalizedAngle = (angle % (Math.PI * 2));
-            if (normalizedAngle > 4.5 && normalizedAngle < 4.9) {
-                oCtx.fillStyle = var(--red);
+            if (normalizedAngle > 4.6 && normalizedAngle < 4.8) {
+                oCtx.fillStyle = "#AA0000"; // Red for active house
                 document.getElementById('house-val').innerText = state.houses[i].toUpperCase();
             } else {
                 oCtx.fillStyle = "#000";
             }
-            
             oCtx.font = "28px serif";
             oCtx.fillText(z, x - 14, y + 14);
         });
 
-        // Menorah (History Candles)
+        // Menorah Flames
         if(state.history.length > 0) {
             const min = Math.min(...state.history), max = Math.max(...state.history);
             state.history.forEach((p, i) => {
@@ -164,7 +161,6 @@
                 const val = ((p-min)/(max-min || 1))*60 + 40;
                 const y = cy + 40 - val;
                 oCtx.fillStyle = "#AA5500"; oCtx.fillRect(x-2, y, 4, val);
-                // Animated Pentecost Flame
                 const flic = Math.sin(state.ticks*0.2 + i)*5;
                 oCtx.fillStyle = "#FFFF55"; oCtx.beginPath();
                 oCtx.moveTo(x, y-10); oCtx.quadraticCurveTo(x-8, y, x, y+20+flic);
@@ -176,8 +172,11 @@
         requestAnimationFrame(render);
     }
 
-    fetchData(); setInterval(fetchData, 60000);
+    // Immediate initial draw then start sync
+    resize();
     render();
+    fetchData();
+    setInterval(fetchData, 15000);
 </script>
 </body>
 </html>
