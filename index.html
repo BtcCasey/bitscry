@@ -2,170 +2,197 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>BITSCRY - THE DIVINE BLOCKCHAIN</title>
+    <title>BITSCRY_V1.2_DIVINE_ENGINE</title>
     <style>
         :root {
             --white: #FFFFFF; --blue: #0000AA; --red: #AA0000; --cyan: #00AAAA;
             --purple: #AA00AA; --yellow: #FFFF55; --black: #000000; --green: #00AA00;
-            --orange: #FF5555;
         }
         body { 
             margin: 0; background-color: var(--black); 
-            font-family: "Courier New", monospace; color: var(--white);
+            font-family: "Courier New", monospace; color: var(--black);
             overflow: hidden; image-rendering: pixelated;
+            display: flex; justify-content: center; align-items: center; height: 100vh;
         }
-        #vga-frame {
-            width: 100vw; height: 100vh;
-            border: 8px ridge var(--cyan); box-sizing: border-box;
-            display: grid; grid-template-columns: 240px 1fr 280px;
+        #monitor {
+            width: 960px; height: 720px; /* 4:3 Aspect */
+            border: 12px ridge var(--cyan); background: var(--white);
+            display: grid; grid-template-columns: 280px 1fr; grid-template-rows: 60px 1fr 180px;
         }
-        .panel { border: 2px solid var(--blue); padding: 10px; position: relative; overflow: hidden; background: var(--white); color: var(--black); }
-        .header { background: var(--blue); color: var(--white); font-weight: bold; text-align: center; margin: -10px -10px 10px -10px; padding: 2px; }
+        .panel { border: 2px solid var(--blue); position: relative; overflow: hidden; background: var(--white); }
+        .header { background: var(--blue); color: var(--white); font-weight: bold; padding: 4px; text-align: center; font-size: 14px; }
         
-        #price-display { color: var(--red); font-size: 32px; text-align: center; font-weight: bold; }
-        #sisyphus-container { position: relative; height: 200px; border-bottom: 4px solid var(--black); margin-top: 20px; }
-        #boulder { position: absolute; width: 60px; height: 60px; background: var(--dkgray); border-radius: 50%; border: 3px solid var(--black); bottom: 0; }
-        #sisyphus-man { position: absolute; bottom: 0; font-size: 20px; font-weight: bold; transition: left 0.1s linear; }
-        
-        canvas { position: absolute; top: 0; left: 0; z-index: 1; pointer-events: none; }
-        .stat-val { color: var(--blue); font-weight: bold; font-size: 18px; }
+        #top-bar { grid-column: 1 / span 2; background: var(--blue); color: var(--white); display: flex; justify-content: space-between; align-items: center; padding: 0 15px; }
+        #sisyphus-panel { grid-row: 2 / span 2; }
+        #oracle-panel { grid-row: 2; border-left: none; }
+        #scripture-panel { grid-row: 3; border-left: none; border-top: none; padding: 10px; }
+
+        canvas { display: block; width: 100%; height: 100%; }
+        .price-text { color: var(--red); font-size: 40px; font-weight: bold; text-align: center; margin-top: 10px; }
     </style>
 </head>
 <body>
 
-<div id="vga-frame">
-    <div class="panel">
-        <div class="header">SISYPHUS.EXE</div>
-        <div style="font-size: 12px;">UNCONFIRMED_TX:</div>
-        <div id="mempool-count" class="stat-val">FETCHING...</div>
-        
-        <div id="sisyphus-container">
-            <div id="boulder" style="left: 100px; background: repeating-conic-gradient(var(--ltgray) 0% 25%, var(--dkgray) 0% 50%);"></div>
-            <div id="sisyphus-man" style="left: 60px;">&lt;O/</div>
-        </div>
-        <p style="font-size: 11px; color: var(--red); margin-top: 10px; font-weight: bold;">"HIS LABOR IS ETERNAL"</p>
+<div id="monitor">
+    <div id="top-bar">
+        <span>TempleOS V5.03 - BITSCRY DIVINE ORACLE</span>
+        <span id="clock">00:00:00</span>
     </div>
 
-    <div class="panel" style="background: var(--white);">
-        <div class="header" style="background: var(--red);">BITSCRY_DIVINE_ORACLE</div>
-        <div id="price-display">℥ ...</div>
-        <div style="text-align:center; color: var(--blue); font-size:12px; font-weight: bold;">HASHRATE: <span id="hash-val">0</span> EH/s</div>
-        
-        <canvas id="ritual-canvas"></canvas>
+    <div id="sisyphus-panel" class="panel">
+        <div class="header">SISYPHUS.EXE [MEMPOOL]</div>
+        <div style="padding: 10px; font-size: 12px;">
+            PENDING_SOULS: <span id="mempool-count" style="color:var(--red); font-weight:bold;">0</span>
+        </div>
+        <canvas id="sisyphus-canvas"></canvas>
     </div>
 
-    <div class="panel">
-        <div class="header">PROPHET.TXT</div>
-        <div id="log" style="font-size: 11px; height: 60%; overflow: hidden;"></div>
-        <div style="border-top: 2px solid var(--blue); padding-top: 10px; font-size: 12px; color: var(--purple);">
-            <b>SCRIPTURE_SEED:</b><br>
-            <span id="verse">"In the beginning God created the heaven and the earth."</span>
+    <div id="oracle-panel" class="panel">
+        <div class="header">TABERNACLE_OF_PROOF</div>
+        <div class="price-text">℥ <span id="price">...</span></div>
+        <canvas id="oracle-canvas"></canvas>
+    </div>
+
+    <div id="scripture-panel" class="panel">
+        <div class="header" style="background:var(--purple)">KJV_PROPHECY</div>
+        <div id="verse-text" style="font-size: 14px; font-style: italic; color: var(--blue); margin-top: 10px;">
+            "And the stone which the builders refused is become the head stone of the corner." — Psalm 118:22
         </div>
+        <div id="trade-log" style="font-size: 10px; margin-top: 10px; height: 80px; overflow: hidden; border-top: 1px dashed var(--black);"></div>
     </div>
 </div>
 
 <script>
-    const canvas = document.getElementById('ritual-canvas');
-    const ctx = canvas.getContext('2d');
-    let state = { price: 0, hash: 790n, txCount: 0, ticks: 0, history: [] };
+    const sCanvas = document.getElementById('sisyphus-canvas');
+    const oCanvas = document.getElementById('oracle-canvas');
+    const sCtx = sCanvas.getContext('2d');
+    const oCtx = oCanvas.getContext('2d');
+    
+    let state = {
+        price: 0,
+        history: [],
+        ticks: 0,
+        mempool: 0,
+        sisyphusX: 0
+    };
 
     function resize() {
-        canvas.width = canvas.parentElement.clientWidth;
-        canvas.height = canvas.parentElement.clientHeight;
+        sCanvas.width = sCanvas.clientWidth; sCanvas.height = sCanvas.clientHeight;
+        oCanvas.width = oCanvas.clientWidth; oCanvas.height = oCanvas.clientHeight;
     }
     window.addEventListener('resize', resize);
     resize();
 
-    async function syncMempool() {
-        try {
-            const res = await fetch('https://mempool.space/api/mempool');
-            const data = await res.json();
-            state.txCount = data.count;
-            document.getElementById('mempool-count').innerText = state.txCount.toLocaleString();
-        } catch(e) { console.log("Mempool busy."); }
-    }
-
-    async function init() {
+    async function fetchData() {
+        // Price & History
         const candles = await fetch('https://api.exchange.coinbase.com/products/BTC-USD/candles?granularity=3600').then(r => r.json());
         state.history = candles.slice(0, 12).map(c => c[4]).reverse();
-
-        const ws = new WebSocket('wss://ws-feed.exchange.coinbase.com');
-        ws.onopen = () => ws.send(JSON.stringify({ type: "subscribe", channels: ["ticker", "matches"], product_ids: ["BTC-USD"] }));
-        ws.onmessage = (e) => {
-            const data = JSON.parse(e.data);
-            if (data.type === 'ticker') {
-                state.price = parseFloat(data.price);
-                document.getElementById('price-display').innerText = `℥ ${state.price.toLocaleString()}`;
-            }
-        };
-
-        setInterval(syncMempool, 5000);
-        syncMempool();
+        
+        // Mempool
+        const mem = await fetch('https://mempool.space/api/mempool').then(r => r.json());
+        state.mempool = mem.count;
+        document.getElementById('mempool-count').innerText = state.mempool.toLocaleString();
     }
 
-    function drawFlame(x, y, size) {
+    const ws = new WebSocket('wss://ws-feed.exchange.coinbase.com');
+    ws.onopen = () => ws.send(JSON.stringify({ type: "subscribe", channels: ["ticker", "matches"], product_ids: ["BTC-USD"] }));
+    ws.onmessage = (e) => {
+        const data = JSON.parse(e.data);
+        if (data.type === 'ticker') {
+            state.price = parseFloat(data.price);
+            document.getElementById('price').innerText = state.price.toLocaleString();
+        }
+    };
+
+    function drawFlame(ctx, x, y) {
         const flicker = Math.sin(state.ticks * 0.2) * 5;
-        ctx.fillStyle = "#FFFF55"; // Yellow core
+        const width = 14 + Math.sin(state.ticks * 0.1) * 2;
+        
+        // Outer Orange Flame
+        ctx.fillStyle = "#FF5555";
         ctx.beginPath();
         ctx.moveTo(x, y);
-        ctx.quadraticCurveTo(x - 10, y + 20, x, y + 40 + flicker);
-        ctx.quadraticCurveTo(x + 10, y + 20, x, y);
+        ctx.quadraticCurveTo(x - width, y + 25, x, y + 50 + flicker);
+        ctx.quadraticCurveTo(x + width, y + 25, x, y);
         ctx.fill();
-        
-        // Red glow dither
-        ctx.fillStyle = "#AA0000";
-        ctx.globalAlpha = 0.3;
+
+        // Inner Holy Yellow
+        ctx.fillStyle = "#FFFF55";
         ctx.beginPath();
-        ctx.arc(x, y + 20, 15, 0, Math.PI*2);
+        ctx.moveTo(x, y + 10);
+        ctx.quadraticCurveTo(x - width/2, y + 25, x, y + 40 + flicker);
+        ctx.quadraticCurveTo(x + width/2, y + 25, x, y + 10);
         ctx.fill();
-        ctx.globalAlpha = 1.0;
     }
 
     function render() {
-        const w = canvas.width, h = canvas.height;
-        const cx = w/2, cy = h/2;
         state.ticks++;
+        const sw = sCanvas.width, sh = sCanvas.height;
+        const ow = oCanvas.width, oh = oCanvas.height;
 
-        ctx.clearRect(0, 0, w, h);
+        // --- SISYPHUS ENGINE ---
+        sCtx.fillStyle = "#FFFFFF"; sCtx.fillRect(0,0,sw,sh);
+        // Draw Hill (Geometry)
+        sCtx.strokeStyle = "#000000"; sCtx.lineWidth = 4;
+        sCtx.beginPath(); sCtx.moveTo(0, sh - 40); sCtx.lineTo(sw, sh - 200); sCtx.stroke();
+        
+        // Sisyphus Logic (Slow struggle)
+        state.sisyphusX = (state.ticks * 0.4) % (sw + 100);
+        const hillY = (x) => (sh - 40) - (x * (160 / sw));
+        const curX = state.sisyphusX - 50;
+        const curY = hillY(curX);
 
-        // 1. ZODIAC RING
-        ctx.strokeStyle = "#AAAAAA";
-        ctx.setLineDash([4, 4]);
-        ctx.beginPath(); ctx.arc(cx, cy, 180, 0, Math.PI*2); ctx.stroke();
-        ctx.setLineDash([]);
+        // Boulder
+        sCtx.save();
+        sCtx.translate(curX + 30, curY - 30);
+        sCtx.rotate(state.ticks * 0.02);
+        sCtx.fillStyle = "#AAAAAA"; sCtx.beginPath(); sCtx.arc(0, 0, 30, 0, Math.PI*2); sCtx.fill();
+        sCtx.strokeStyle = "#000000"; sCtx.stroke();
+        // Boulder Texture (Dither style)
+        sCtx.fillStyle = "#555555"; sCtx.fillRect(-15, -5, 30, 2);
+        sCtx.restore();
 
-        // 2. THE MENORAH (Divine Flames)
+        // Sisyphus Sprite
+        sCtx.fillStyle = "#000000";
+        sCtx.font = "bold 20px Courier";
+        sCtx.fillText("<O/", curX - 25, curY - 10);
+        sCtx.fillRect(curX - 15, curY - 10, 4, 15); // Legs
+
+        // --- ORACLE ENGINE ---
+        oCtx.fillStyle = "#FFFFFF"; oCtx.fillRect(0,0,ow,oh);
+        const cx = ow/2, cy = oh/2 + 20;
+
+        // Animated Zodiac Ring (Emojis)
+        const zodiacs = ["♈","♉","♊","♋","♌","♍","♎","♏","♐","♑","♒","♓"];
+        zodiacs.forEach((z, i) => {
+            const angle = (i * Math.PI * 2) / 12 + (state.ticks * 0.005);
+            const r = 160;
+            oCtx.font = "24px serif";
+            oCtx.fillText(z, cx + Math.cos(angle)*r - 12, cy + Math.sin(angle)*r + 12);
+        });
+
+        // The Menorah (Pentecostal Flames)
         if(state.history.length > 0) {
             const min = Math.min(...state.history);
             const max = Math.max(...state.history);
-            const range = max - min;
-            
             state.history.forEach((p, i) => {
-                const x = cx - 150 + (i * 30);
-                const h_val = ((p - min) / range) * 100 + 50;
-                const y = cy + 100 - h_val;
+                const x = cx - 140 + (i * 25);
+                const val = ((p - min) / (max - min || 1)) * 80 + 40;
+                const y = cy + 60 - val;
                 
-                // Draw Candle
-                ctx.fillStyle = "#AA5500"; // Brown/Gold
-                ctx.fillRect(x - 4, y, 8, h_val);
-                
-                // Draw Filled Flame
-                drawFlame(x, y - 45, h_val);
+                // Candle Stem
+                oCtx.fillStyle = "#AA5500";
+                oCtx.fillRect(x - 3, y, 6, val);
+                // Animated Flame
+                drawFlame(oCtx, x, y - 55);
             });
         }
 
-        // 3. SISYPHUS LOGIC
-        const sisyMan = document.getElementById('sisyphus-man');
-        const boulder = document.getElementById('boulder');
-        // Movement is based on current price "momentum" or just a steady divine struggle
-        const walk = (state.ticks % 200);
-        sisyMan.style.left = (walk) + "px";
-        boulder.style.left = (walk + 30) + "px";
-        boulder.style.transform = `rotate(${state.ticks * 5}deg)`;
-
+        document.getElementById('clock').innerText = new Date().toLocaleTimeString();
         requestAnimationFrame(render);
     }
 
+    fetchData(); setInterval(fetchData, 10000);
     init(); render();
 </script>
 </body>
