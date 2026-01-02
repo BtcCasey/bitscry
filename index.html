@@ -2,34 +2,34 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>THE RITUAL: ELECTRIC BLOOD</title>
+    <title>THE RITUAL OF PROOF</title>
     <link href="https://fonts.googleapis.com/css2?family=Grenze+Gotisch:wght@400;700&family=IM+Fell+DW+Pica&display=swap" rel="stylesheet">
     <style>
         :root {
             --blood: #8b0000;
             --lightning: #00d4ff;
             --ritual-red: #ff1111;
-            --paper: #e3d3a3;
+            --stone: #0a0908;
         }
-        body { margin: 0; overflow: hidden; background: #050403; font-family: 'IM Fell DW Pica', serif; }
+        body { margin: 0; overflow: hidden; background: #000; font-family: 'IM Fell DW Pica', serif; }
         
         #altar-ui {
-            position: absolute; top: 50px; left: 50px; pointer-events: none; z-index: 100;
+            position: absolute; top: 60px; left: 80px; pointer-events: none; z-index: 100;
         }
         #price { 
-            font-family: 'Grenze Gotisch', serif; font-size: 84px; color: var(--ritual-red); 
+            font-family: 'Grenze Gotisch', serif; font-size: 88px; color: var(--ritual-red); 
             line-height: 0.8; text-shadow: 0 0 20px var(--blood), 0 0 5px var(--lightning); 
         }
         #hash { font-size: 16px; color: var(--lightning); opacity: 0.8; margin-top: 15px; letter-spacing: 2px; font-weight: bold; }
 
         #log {
-            position: absolute; bottom: 50px; left: 50px; width: 320px;
+            position: absolute; bottom: 80px; left: 80px; width: 320px;
             max-height: 250px; overflow: hidden;
             display: flex; flex-direction: column-reverse;
             mask-image: linear-gradient(to top, black 70%, transparent 100%);
-            font-size: 14px; color: var(--lightning);
+            font-size: 14px; color: var(--ritual-red);
         }
-        .entry { padding: 4px 0; border-bottom: 1px solid rgba(0, 212, 255, 0.2); text-shadow: 0 0 5px var(--lightning); }
+        .entry { padding: 4px 0; border-bottom: 1px solid rgba(255, 17, 17, 0.1); }
         
         canvas { display: block; }
     </style>
@@ -51,9 +51,11 @@
     let state = {
         price: 0,
         history: [],
-        hash: 750_000_000_000_000_000_000n,
+        hash: 760_000_000_000_000_000_000n,
         runes: [],
-        bolts: []
+        bolts: [],
+        scrawlProgress: 0,
+        lastScrawl: 0
     };
 
     function resize() {
@@ -76,120 +78,143 @@
                 document.getElementById('price').innerText = `℥ ${state.price.toLocaleString()}`;
             }
             if (data.type === 'match') {
-                createBolt(window.innerWidth/2, window.innerHeight/2);
-                state.runes.push({ x: Math.random()*window.innerWidth, y: Math.random()*window.innerHeight, life: 1.0, size: 10 });
+                // Summon Red Soul Rune from the edge
+                const angle = Math.random() * Math.PI * 2;
+                const dist = Math.max(window.innerWidth, window.innerHeight);
+                state.runes.push({
+                    x: window.innerWidth/2 + Math.cos(angle) * dist,
+                    y: window.innerHeight/2 + Math.sin(angle) * dist,
+                    life: 1.0,
+                    size: 5 + (parseFloat(data.size) * 10)
+                });
+                
                 const div = document.createElement('div');
                 div.className = 'entry';
-                div.innerText = `⚡ ${data.size} BTC @ ${state.price.toLocaleString()}`;
+                div.innerText = `ᚱ ${data.size} BTC TRANSMUTED`;
                 document.getElementById('log').prepend(div);
             }
         };
+        
         setInterval(() => {
             state.hash += BigInt(Math.floor((Math.random()-0.5)*2000000000000000));
             document.getElementById('hash').innerText = `LEYLINE PROOF: ${(state.hash / 1_000_000_000_000_000_000n)} EH/s`;
-        }, 2000);
-    }
-
-    function createBolt(x, y) {
-        state.bolts.push({ x, y, life: 1.0, segments: [] });
+        }, 3000);
     }
 
     function drawStone() {
         const w = window.innerWidth, h = window.innerHeight;
-        ctx.fillStyle = '#0a0908'; // Deep Slate
+        ctx.fillStyle = '#0a0908';
         ctx.fillRect(0, 0, w, h);
         
-        // Stone Cracks
-        ctx.strokeStyle = '#151311';
-        ctx.lineWidth = 1;
-        for(let i=0; i<30; i++) {
+        // The Double Red Outline
+        ctx.strokeStyle = '#4a0000';
+        ctx.lineWidth = 15;
+        ctx.strokeRect(20, 20, w-40, h-40);
+        ctx.strokeStyle = '#8b0000';
+        ctx.lineWidth = 2;
+        ctx.strokeRect(40, 40, w-80, h-80);
+
+        // Stone Texture
+        ctx.strokeStyle = '#12110f';
+        for(let i=0; i<20; i++) {
             ctx.beginPath();
             ctx.moveTo(Math.random()*w, 0); ctx.lineTo(Math.random()*w, h);
             ctx.stroke();
         }
-
-        // Blood-Red Ritual Border
-        ctx.strokeStyle = 'rgba(139, 0, 0, 0.4)';
-        ctx.lineWidth = 8;
-        ctx.strokeRect(30, 30, w-60, h-60);
     }
 
     function render() {
         const w = window.innerWidth, h = window.innerHeight;
         const cx = w/2, cy = h/2;
-        const orbR = 180;
+        const orbR = 200;
         
         drawStone();
 
-        // 1. THE RITUAL CIRCLE
-        ctx.shadowBlur = 15; ctx.shadowColor = '#ff0000';
-        ctx.strokeStyle = '#ff1111';
-        ctx.setLineDash([15, 25]);
-        ctx.beginPath(); ctx.arc(cx, cy, orbR + 20, 0, Math.PI*2); ctx.stroke();
+        // 1. RITUAL CIRCLE
+        ctx.shadowBlur = 20; ctx.shadowColor = '#ff1111';
+        ctx.strokeStyle = 'rgba(255, 17, 17, 0.5)';
+        ctx.lineWidth = 3;
+        ctx.setLineDash([20, 30]);
+        ctx.beginPath(); ctx.arc(cx, cy, orbR + 30, 0, Math.PI*2); ctx.stroke();
         ctx.setLineDash([]);
         ctx.shadowBlur = 0;
 
-        // 2. THE SPINNING SEAL & CENTERED LEYLINE
+        // 2. THE SEAL & SCRAWLING LEYLINE
         ctx.save();
         ctx.translate(cx, cy);
-        ctx.rotate(Date.now() * 0.0004);
+        ctx.rotate(Date.now() * 0.0003);
         
-        // The Square Seal
-        ctx.strokeStyle = 'rgba(255, 17, 17, 0.6)';
-        ctx.lineWidth = 3;
+        // Square Seal
+        ctx.strokeStyle = 'rgba(255, 17, 17, 0.7)';
+        ctx.lineWidth = 4;
         ctx.strokeRect(-orbR/1.4, -orbR/1.4, orbR*1.4, orbR*1.4);
         
-        // Trapped Leyline (Centered inside the seal)
+        // Scrawling Graph Logic
         if (state.history.length > 0) {
+            ctx.rotate(-Date.now() * 0.0003); // Level out
             const min = Math.min(...state.history);
             const max = Math.max(...state.history);
-            const range = max - min;
             const graphW = orbR * 1.2;
             const graphH = orbR * 0.8;
             
-            ctx.rotate(-Date.now() * 0.0004); // Counter-rotate so graph stays horizontal inside seal
+            // Update scrawl progress (resets every 5 seconds)
+            const now = Date.now();
+            if (now - state.lastScrawl > 5000) {
+                state.scrawlProgress = 0;
+                state.lastScrawl = now;
+            }
+            state.scrawlProgress = Math.min(1, state.scrawlProgress + 0.01);
+
             ctx.beginPath();
             ctx.strokeStyle = '#00d4ff';
-            ctx.shadowBlur = 10; ctx.shadowColor = '#00d4ff';
-            
+            ctx.shadowBlur = 15; ctx.shadowColor = '#00d4ff';
+            ctx.lineWidth = 2;
+
+            const visibleCount = Math.floor(state.history.length * state.scrawlProgress);
             const step = graphW / state.history.length;
-            state.history.forEach((p, i) => {
+
+            for (let i = 0; i < visibleCount; i++) {
                 const x = -graphW/2 + (i * step);
-                const y = graphH/2 - ((p - min) / range * graphH);
+                const y = graphH/2 - ((state.history[i] - min) / (max - min) * graphH);
                 if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
-            });
+            }
             ctx.stroke();
             ctx.shadowBlur = 0;
         }
         ctx.restore();
 
-        // 3. BLUE LIGHTNING BOLTS (Trade Impacts)
-        state.bolts = state.bolts.filter(b => {
-            ctx.strokeStyle = `rgba(0, 212, 255, ${b.life})`;
-            ctx.lineWidth = 2;
-            ctx.shadowBlur = 10; ctx.shadowColor = '#00d4ff';
-            ctx.beginPath();
-            let tx = b.x, ty = b.y;
-            ctx.moveTo(tx, ty);
-            for(let i=0; i<5; i++) {
-                tx += (Math.random()-0.5)*100;
-                ty -= 40;
-                ctx.lineTo(tx, ty);
+        // 3. SOUL ABSORPTION (Runes moving from edge to center)
+        state.runes = state.runes.filter(r => {
+            const dx = cx - r.x;
+            const dy = cy - r.y;
+            const dist = Math.sqrt(dx*dx + dy*dy);
+            
+            ctx.fillStyle = 'rgba(255, 17, 17, 0.8)';
+            ctx.shadowBlur = 10; ctx.shadowColor = '#ff1111';
+            ctx.beginPath(); ctx.arc(r.x, r.y, r.size, 0, Math.PI*2); ctx.fill();
+            
+            // Physics: Pull toward center
+            r.x += dx * 0.05;
+            r.y += dy * 0.05;
+            
+            // Draw "tail" or lightning spark toward center
+            if (dist > 50) {
+                ctx.strokeStyle = 'rgba(0, 212, 255, 0.3)';
+                ctx.beginPath(); ctx.moveTo(r.x, r.y); ctx.lineTo(r.x + dx*0.1, r.y + dy*0.1); ctx.stroke();
             }
-            ctx.stroke();
-            b.life -= 0.05;
-            return b.life > 0;
+
+            return dist > 20; // Absorb when it hits the orb
         });
 
-        // 4. RUNES
-        state.runes = state.runes.filter(r => {
-            ctx.fillStyle = '#ff1111';
-            ctx.globalAlpha = r.life;
-            ctx.beginPath(); ctx.arc(r.x, r.y, r.size, 0, Math.PI*2); ctx.fill();
-            r.life -= 0.02;
-            return r.life > 0;
-        });
-        ctx.globalAlpha = 1; ctx.shadowBlur = 0;
+        // 4. PERIODIC BOLTS
+        if (Math.random() < 0.02) {
+            ctx.strokeStyle = 'rgba(0, 212, 255, 0.6)';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(cx, cy);
+            ctx.lineTo(cx + (Math.random()-0.5)*w, cy - (Math.random()*h));
+            ctx.stroke();
+        }
 
         requestAnimationFrame(render);
     }
